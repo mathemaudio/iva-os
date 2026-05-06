@@ -67,6 +67,46 @@ export class AppTest {
 		return { openWindowsBeforeMinimize, restoredVisible, maximized, closed }
 	}
 
+	@Scenario('drags a normal window by its title bar')
+	static async dragsWindowFromHeader(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ movedLeft: number, movedTop: number }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before opening a draggable second window')
+		this.click(app, '[data-testid="launcher-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected text editor window to open before dragging')
+
+		const desktopSurface = this.find(app, '[data-testid="desktop-surface"]')
+		const header = this.find(app, '[data-testid="window-header-text-editor"]')
+		const windowElement = this.find(app, '[data-testid="window-text-editor"]')
+		assert(desktopSurface !== null, 'Expected the desktop surface to exist for dragging')
+		assert(header !== null, 'Expected the text editor header to exist for dragging')
+		assert(windowElement !== null, 'Expected the text editor window to exist for dragging')
+
+		const beforeLeft = this.readPixelOffset(windowElement, 'left')
+		const beforeTop = this.readPixelOffset(windowElement, 'top')
+		const headerBounds = header.getBoundingClientRect()
+		const startClientX = headerBounds.left + headerBounds.width / 2
+		const startClientY = headerBounds.top + headerBounds.height / 2
+		const targetClientX = startClientX + 120
+		const targetClientY = startClientY + 90
+		header.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: startClientX, clientY: startClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: targetClientX, clientY: targetClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: targetClientX, clientY: targetClientY }))
+		await app.updateComplete
+
+		const movedWindow = this.find(app, '[data-testid="window-text-editor"]')
+		assert(movedWindow !== null, 'Expected the text editor window to remain visible after dragging')
+		const movedLeft = this.readPixelOffset(movedWindow, 'left')
+		const movedTop = this.readPixelOffset(movedWindow, 'top')
+		assert(movedLeft !== beforeLeft || movedTop !== beforeTop, `Expected the dragged window position to change from its starting point. beforeLeft=${beforeLeft}, movedLeft=${movedLeft}, beforeTop=${beforeTop}, movedTop=${movedTop}`)
+		return { movedLeft, movedTop }
+	}
+
 	@Scenario('changes theme and wallpaper in settings and persists them in local storage')
 	static async persistsShellPreferences(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ storedTheme: string, storedWallpaper: string, renderedTheme: string, renderedWallpaper: string }> {
 		const assert: AssertFn = scenario.assert
@@ -125,6 +165,12 @@ export class AppTest {
 			throw new Error(`Expected element to exist for selector: ${selector}`)
 		}
 		element.click()
+	}
+
+	@Spec('Reads a numeric pixel offset from an inline style declaration.')
+	private static readPixelOffset(element: HTMLElement, propertyName: 'left' | 'top'): number {
+		const inlineValue = element.style.getPropertyValue(propertyName)
+		return Number.parseFloat(inlineValue.replace('px', ''))
 	}
 
 	@Spec('Clears the dedicated shell preference storage key used by the paired App host.')
