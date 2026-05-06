@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "platform": "LLL (Large Language Language)",
+  "projectType": "web",
+  "templateSource": "bundled:templates/client-server-lllts",
+  "createdAt": "2026-05-06T13:52:47.894Z",
+  "serverName": "project-os3-server",
+  "clientPort": 26761,
+  "serverPort": 26762,
+  "tunnelPort": 26763,
+  "initialPrompt": ".",
+  "initialComposerAttachments": [],
+  "promptProgressState": "not_started"
+}

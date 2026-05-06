@@ -1,0 +1,26 @@
+{
+  "name": "lllts",
+  "version": "0.1.35",
+  "description": "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
+  "license": "GPL-3.0-or-later",
+  "main": "dist/LLLTS.bundle.cjs",
+  "bin": {
+    "lllts": "./bin/lllts"
+  },
+  "type": "commonjs",
+  "keywords": [
+    "typescript",
+    "compiler",
+    "testing",
+    "llm"
+  ],
+  "dependencies": {
+    "express": "^4.22.1",
+    "playwright": "^1.52.0",
+    "ts-morph": "^21.0.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
