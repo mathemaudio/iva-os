@@ -1,14 +1,13 @@
 import { css, html, type CSSResultGroup, type TemplateResult } from 'lit'
 import { Spec } from '@shared/lll.lll'
 
-@Spec('Provides shared view rendering and styles for the Web OS shell.')
+@Spec('Provides shared shell styles plus settings-window rendering helpers for IvaOS.')
 export class AppShellView {
 	static readonly styles: CSSResultGroup = css`
 		:host {
 			display: block;
 			height: 100vh;
 			margin: 0;
-			color: rgb(241, 245, 249);
 			font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
 		}
 
@@ -22,44 +21,56 @@ export class AppShellView {
 		}
 
 		.shell {
+			--shell-text: rgb(241, 245, 249);
+			--shell-muted-text: rgba(226, 232, 240, 0.82);
+			--shell-panel: rgba(15, 23, 42, 0.68);
+			--shell-panel-strong: rgba(15, 23, 42, 0.82);
+			--shell-control: rgba(255, 255, 255, 0.08);
+			--shell-control-border: rgba(255, 255, 255, 0.14);
+			--shell-status: rgba(34, 197, 94, 0.14);
+			--shell-status-border: rgba(34, 197, 94, 0.24);
+			--shell-status-text: rgb(220, 252, 231);
+			--shell-error: rgba(248, 113, 113, 0.14);
+			--shell-error-border: rgba(248, 113, 113, 0.24);
+			--shell-error-text: rgb(254, 226, 226);
+			--shell-shadow: rgba(15, 23, 42, 0.42);
+			--shell-overlay: rgba(8, 15, 33, 0.28);
+			--shell-scrollbar-track: rgba(255, 255, 255, 0.08);
+			--shell-scrollbar-thumb: rgba(226, 232, 240, 0.58);
+			--shell-scrollbar-thumb-hover: rgba(241, 245, 249, 0.78);
+			--shell-scrollbar-corner: rgba(255, 255, 255, 0.04);
 			height: 100%;
 			display: grid;
 			grid-template-rows: auto 1fr auto;
+			background-color: rgb(8, 15, 33);
 			background-size: cover;
 			background-position: center;
 			background-repeat: no-repeat;
+			color: var(--shell-text);
+			color-scheme: dark;
 		}
 
-		.shell[data-theme='midnight'] {
-			background-image:
-				linear-gradient(180deg, rgba(8, 15, 33, 0.42), rgba(7, 10, 20, 0.72)),
-				linear-gradient(135deg, rgb(32, 78, 151), rgb(15, 23, 42) 55%, rgb(56, 189, 248));
-		}
-
-		.shell[data-theme='sunset'] {
-			background-image:
-				linear-gradient(180deg, rgba(67, 20, 7, 0.2), rgba(33, 11, 28, 0.55)),
-				linear-gradient(135deg, rgb(249, 115, 22), rgb(236, 72, 153) 52%, rgb(99, 102, 241));
-		}
-
-		.shell[data-wallpaper='aurora'] {
-			background-blend-mode: overlay, normal;
-		}
-
-		.shell[data-wallpaper='dunes'] {
-			background-image:
-				linear-gradient(180deg, rgba(41, 24, 12, 0.2), rgba(19, 14, 26, 0.62)),
-				linear-gradient(160deg, rgb(245, 158, 11), rgb(234, 88, 12) 48%, rgb(120, 53, 15));
-		}
-
-		.shell[data-wallpaper='grid'] {
-			background-image:
-				linear-gradient(180deg, rgba(4, 13, 24, 0.3), rgba(3, 7, 18, 0.74)),
-				radial-gradient(circle at top left, rgba(34, 197, 94, 0.28), transparent 35%),
-				linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-				linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-				linear-gradient(135deg, rgb(15, 23, 42), rgb(17, 94, 89));
-			background-size: auto, auto, 32px 32px, 32px 32px, auto;
+		.shell[data-theme='light'] {
+			--shell-text: rgb(15, 23, 42);
+			--shell-muted-text: rgba(15, 23, 42, 0.74);
+			--shell-panel: rgba(255, 255, 255, 0.68);
+			--shell-panel-strong: rgba(255, 255, 255, 0.84);
+			--shell-control: rgba(255, 255, 255, 0.46);
+			--shell-control-border: rgba(148, 163, 184, 0.34);
+			--shell-status: rgba(34, 197, 94, 0.12);
+			--shell-status-border: rgba(34, 197, 94, 0.2);
+			--shell-status-text: rgb(21, 128, 61);
+			--shell-error: rgba(248, 113, 113, 0.12);
+			--shell-error-border: rgba(239, 68, 68, 0.22);
+			--shell-error-text: rgb(185, 28, 28);
+			--shell-shadow: rgba(148, 163, 184, 0.28);
+			--shell-overlay: rgba(255, 255, 255, 0.16);
+			--shell-scrollbar-track: rgba(148, 163, 184, 0.18);
+			--shell-scrollbar-thumb: rgba(100, 116, 139, 0.58);
+			--shell-scrollbar-thumb-hover: rgba(71, 85, 105, 0.76);
+			--shell-scrollbar-corner: rgba(148, 163, 184, 0.08);
+			background-color: rgb(226, 232, 240);
+			color-scheme: light;
 		}
 
 		.top-bar {
@@ -68,9 +79,9 @@ export class AppShellView {
 			align-items: center;
 			gap: 16px;
 			padding: 12px 18px;
-			background: rgba(15, 23, 42, 0.48);
+			background: var(--shell-panel);
 			backdrop-filter: blur(18px);
-			border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+			border-bottom: 1px solid var(--shell-control-border);
 		}
 
 		.brand {
@@ -86,7 +97,7 @@ export class AppShellView {
 		.brand span,
 		.top-bar-clock {
 			font-size: 0.8rem;
-			color: rgba(226, 232, 240, 0.82);
+			color: var(--shell-muted-text);
 		}
 
 		.desktop {
@@ -101,8 +112,8 @@ export class AppShellView {
 			top: 24px;
 			padding: 14px 16px;
 			border-radius: 14px;
-			background: rgba(15, 23, 42, 0.28);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: var(--shell-overlay);
+			border: 1px solid var(--shell-control-border);
 			max-width: 320px;
 		}
 
@@ -113,7 +124,7 @@ export class AppShellView {
 
 		.windows {
 			position: absolute;
-			inset: 22px 22px 22px 22px;
+			inset: 22px;
 		}
 
 		.window-shell {
@@ -122,10 +133,10 @@ export class AppShellView {
 			min-height: 220px;
 			border-radius: 18px;
 			overflow: hidden;
-			border: 1px solid rgba(255, 255, 255, 0.14);
-			background: rgba(15, 23, 42, 0.78);
+			border: 1px solid var(--shell-control-border);
+			background: var(--shell-panel-strong);
 			backdrop-filter: blur(18px);
-			box-shadow: 0 22px 65px rgba(15, 23, 42, 0.42);
+			box-shadow: 0 22px 65px var(--shell-shadow);
 		}
 
 		.window-shell[data-maximized='true'] {
@@ -145,8 +156,8 @@ export class AppShellView {
 			align-items: center;
 			gap: 12px;
 			padding: 14px 16px;
-			background: rgba(15, 23, 42, 0.58);
-			border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+			background: var(--shell-panel);
+			border-bottom: 1px solid var(--shell-control-border);
 			cursor: grab;
 			user-select: none;
 		}
@@ -171,9 +182,9 @@ export class AppShellView {
 		.launcher-toggle,
 		.launcher-card,
 		.dock button,
-		.settings-row select {
-			border: 1px solid rgba(255, 255, 255, 0.12);
-			background: rgba(255, 255, 255, 0.08);
+		.settings-select {
+			border: 1px solid var(--shell-control-border);
+			background: var(--shell-control);
 			color: inherit;
 		}
 
@@ -189,6 +200,61 @@ export class AppShellView {
 			padding: 18px;
 			display: grid;
 			gap: 14px;
+			height: calc(100% - 61px);
+			min-height: 0;
+			overflow: auto;
+			scrollbar-gutter: stable both-edges;
+			scrollbar-color: var(--shell-scrollbar-thumb) var(--shell-scrollbar-track);
+			scrollbar-width: thin;
+		}
+
+		.window-body::-webkit-scrollbar {
+			width: 12px;
+			height: 12px;
+		}
+
+		.window-body::-webkit-scrollbar-track {
+			background: var(--shell-scrollbar-track);
+			border-radius: 999px;
+		}
+
+		.window-body::-webkit-scrollbar-thumb {
+			background-color: var(--shell-scrollbar-thumb);
+			border-radius: 999px;
+			border: 3px solid transparent;
+			background-clip: content-box;
+		}
+
+		.window-body::-webkit-scrollbar-thumb:hover {
+			background-color: var(--shell-scrollbar-thumb-hover);
+		}
+
+		.window-body::-webkit-scrollbar-corner {
+			background: var(--shell-scrollbar-corner);
+		}
+
+		.window-resize-handle {
+			position: absolute;
+			right: 0;
+			bottom: 0;
+			width: 20px;
+			height: 20px;
+			border: 0;
+			padding: 0;
+			background:
+				linear-gradient(135deg, transparent 0 42%, rgba(255, 255, 255, 0.18) 42% 50%, transparent 50% 64%, rgba(255, 255, 255, 0.18) 64% 72%, transparent 72% 100%);
+			cursor: nwse-resize;
+			opacity: 0.85;
+		}
+
+		.window-resize-handle:hover,
+		.window-resize-handle:focus-visible {
+			opacity: 1;
+			outline: none;
+		}
+
+		.window-shell[data-maximized='true'] .window-resize-handle {
+			display: none;
 		}
 
 		.window-body h2,
@@ -197,16 +263,23 @@ export class AppShellView {
 			margin: 0;
 		}
 
-		.placeholder-grid {
+		.settings-grid {
 			display: grid;
-			gap: 12px;
+			gap: 14px;
 		}
 
-		.placeholder-panel {
+		.settings-panel {
 			padding: 14px;
 			border-radius: 14px;
-			background: rgba(255, 255, 255, 0.06);
-			border: 1px solid rgba(255, 255, 255, 0.1);
+			background: var(--shell-control);
+			border: 1px solid var(--shell-control-border);
+			display: grid;
+			gap: 10px;
+		}
+
+		.settings-panel header {
+			display: grid;
+			gap: 4px;
 		}
 
 		.settings-row {
@@ -214,9 +287,14 @@ export class AppShellView {
 			gap: 8px;
 		}
 
-		.settings-row select {
+		.settings-select {
 			padding: 10px 12px;
 			border-radius: 12px;
+		}
+
+		.settings-note {
+			font-size: 0.82rem;
+			color: var(--shell-muted-text);
 		}
 
 		.dock-region {
@@ -231,9 +309,9 @@ export class AppShellView {
 			gap: 10px;
 			padding: 12px;
 			border-radius: 22px;
-			background: rgba(15, 23, 42, 0.5);
+			background: var(--shell-panel);
 			backdrop-filter: blur(18px);
-			border: 1px solid rgba(255, 255, 255, 0.14);
+			border: 1px solid var(--shell-control-border);
 			max-width: calc(100vw - 24px);
 		}
 
@@ -255,10 +333,10 @@ export class AppShellView {
 			width: min(460px, calc(100vw - 44px));
 			padding: 18px;
 			border-radius: 20px;
-			background: rgba(15, 23, 42, 0.72);
-			border: 1px solid rgba(255, 255, 255, 0.14);
+			background: var(--shell-panel-strong);
+			border: 1px solid var(--shell-control-border);
 			backdrop-filter: blur(18px);
-			box-shadow: 0 22px 65px rgba(15, 23, 42, 0.45);
+			box-shadow: 0 22px 65px var(--shell-shadow);
 		}
 
 		.launcher-grid {
@@ -286,7 +364,7 @@ export class AppShellView {
 		.launcher-card small,
 		.dock-label,
 		.window-subtitle {
-			color: rgba(226, 232, 240, 0.8);
+			color: var(--shell-muted-text);
 		}
 
 		.icon-tile {
@@ -300,84 +378,48 @@ export class AppShellView {
 			padding: 8px 12px;
 			width: fit-content;
 			border-radius: 999px;
-			background: rgba(34, 197, 94, 0.14);
-			border: 1px solid rgba(34, 197, 94, 0.24);
-			color: rgb(220, 252, 231);
+			background: var(--shell-status);
+			border: 1px solid var(--shell-status-border);
+			color: var(--shell-status-text);
 		}
 	`
 
-	@Spec('Renders the inside of a single application window.')
-	static renderWindowContent(appId: string, activeTheme: string, activeWallpaper: string, onThemeChange: (event: Event) => void, onWallpaperChange: (event: Event) => void): TemplateResult {
-		if (appId === 'settings') {
-			return html`
-				<div class="placeholder-grid">
-					<div class="status-pill">⚙️ Shell preferences are saved in this browser</div>
+	@Spec('Renders the shell settings content with independent theme and wallpaper selection controls.')
+	static renderSettingsContent(
+		activeTheme: string,
+		activeWallpaper: string,
+		wallpaperChoices: Array<{ id: string, label: string }>,
+		onThemeChange: (event: Event) => void,
+		onWallpaperChange: (event: Event) => void
+	): TemplateResult {
+		return html`
+			<div class="settings-grid">
+				<div class="status-pill">⚙️ Settings are saved locally in this browser</div>
+				<section class="settings-panel">
+					<header>
+						<strong>Appearance mode</strong>
+						<span class="settings-note">Theme changes the shell chrome only. Your wallpaper stays exactly as selected.</span>
+					</header>
 					<div class="settings-row">
 						<label for="theme-select">Theme</label>
-						<select id="theme-select" data-testid="theme-select" .value=${activeTheme} @change=${onThemeChange}>
-							<option value="midnight">Midnight</option>
-							<option value="sunset">Sunset</option>
+						<select id="theme-select" class="settings-select" data-testid="theme-select" .value=${activeTheme} @change=${onThemeChange}>
+							<option value="dark">Dark</option>
+							<option value="light">Light</option>
 						</select>
 					</div>
+				</section>
+				<section class="settings-panel">
+					<header>
+						<strong>Wallpaper</strong>
+						<span class="settings-note">Choose from built-in gradients or images stored in /Pictures/Wallpapers.</span>
+					</header>
 					<div class="settings-row">
 						<label for="wallpaper-select">Wallpaper</label>
-						<select id="wallpaper-select" data-testid="wallpaper-select" .value=${activeWallpaper} @change=${onWallpaperChange}>
-							<option value="aurora">Aurora</option>
-							<option value="dunes">Dunes</option>
-							<option value="grid">Grid</option>
+						<select id="wallpaper-select" class="settings-select" data-testid="wallpaper-select" .value=${activeWallpaper} @change=${onWallpaperChange}>
+							${wallpaperChoices.map(choice => html`<option .value=${choice.id}>${choice.label}</option>`)}
 						</select>
 					</div>
-				</div>
-			`
-		}
-
-		if (appId === 'file-manager') {
-			return html`
-				<div class="placeholder-grid">
-					<div class="placeholder-panel">
-						<h3>Home</h3>
-						<p>Virtual filesystem arrives in chunk 2. This placeholder reserves the browsing surface.</p>
-					</div>
-					<div class="placeholder-panel">
-						<h3>Quick actions</h3>
-						<p>Create, rename, move, and upload flows will connect here later.</p>
-					</div>
-				</div>
-			`
-		}
-
-		if (appId === 'text-editor') {
-			return html`
-				<div class="placeholder-grid">
-					<div class="placeholder-panel">
-						<h3>Draft buffer</h3>
-						<p>Text editing will connect to the virtual filesystem in chunk 2.</p>
-					</div>
-					<div class="placeholder-panel">
-						<h3>Formatting</h3>
-						<p>Keyboard and save flows will appear once files exist.</p>
-					</div>
-				</div>
-			`
-		}
-
-		if (appId === 'image-viewer') {
-			return html`
-				<div class="placeholder-grid">
-					<div class="placeholder-panel">
-						<h3>Preview area</h3>
-						<p>Image open and zoom behaviors will appear when file associations land.</p>
-					</div>
-				</div>
-			`
-		}
-
-		return html`
-			<div class="placeholder-grid">
-				<div class="placeholder-panel">
-					<h3>Build surface</h3>
-					<p>App Studio will grow into platform tooling in chunk 3.</p>
-				</div>
+				</section>
 			</div>
 		`
 	}

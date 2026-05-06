@@ -2,7 +2,7 @@ import './App.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec, SubjectFactory, WaitForFn } from '@shared/lll.lll'
 import { App } from './App.lll'
 
-@Spec('Exercises the Web OS shell through visible UI interactions only.')
+@Spec('Exercises the IvaOS shell through visible UI interactions only.')
 export class AppTest {
 	testType = 'behavioral'
 
@@ -107,7 +107,45 @@ export class AppTest {
 		return { movedLeft, movedTop }
 	}
 
-	@Scenario('changes theme and wallpaper in settings and persists them in local storage')
+	@Scenario('resizes a normal window from its lower-right handle')
+	static async resizesWindowFromHandle(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ resizedWidth: number, resizedHeight: number }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="dock-app-settings"]')
+		await waitFor(() => this.find(app, '[data-testid="window-settings"]') !== null, 'Expected settings window to open before resizing')
+		const desktopSurface = this.find(app, '[data-testid="desktop-surface"]')
+		const windowElement = this.find(app, '[data-testid="window-settings"]')
+		const resizeHandle = this.find(app, '[data-testid="resize-settings"]')
+		assert(desktopSurface !== null, 'Expected the desktop surface to exist for resize testing')
+		assert(windowElement !== null, 'Expected the settings window to exist for resize testing')
+		assert(resizeHandle !== null, 'Expected the settings resize handle to exist')
+
+		const beforeWidth = this.readPixelSize(windowElement, 'width')
+		const beforeHeight = this.readPixelSize(windowElement, 'height')
+		const handleBounds = resizeHandle.getBoundingClientRect()
+		const startClientX = handleBounds.left + handleBounds.width / 2
+		const startClientY = handleBounds.top + handleBounds.height / 2
+		const targetClientX = startClientX + 90
+		const targetClientY = startClientY + 70
+		resizeHandle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: startClientX, clientY: startClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: targetClientX, clientY: targetClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: targetClientX, clientY: targetClientY }))
+		await app.updateComplete
+
+		const resizedWindow = this.find(app, '[data-testid="window-settings"]')
+		assert(resizedWindow !== null, 'Expected the settings window to remain visible after resizing')
+		const resizedWidth = this.readPixelSize(resizedWindow, 'width')
+		const resizedHeight = this.readPixelSize(resizedWindow, 'height')
+		assert(resizedWidth > beforeWidth, `Expected resized width to increase. beforeWidth=${beforeWidth}, resizedWidth=${resizedWidth}`)
+		assert(resizedHeight > beforeHeight, `Expected resized height to increase. beforeHeight=${beforeHeight}, resizedHeight=${resizedHeight}`)
+		return { resizedWidth, resizedHeight }
+	}
+
+	@Scenario('changes theme and wallpaper in settings without coupling them and persists both values')
 	static async persistsShellPreferences(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ storedTheme: string, storedWallpaper: string, renderedTheme: string, renderedWallpaper: string }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
@@ -123,29 +161,79 @@ export class AppTest {
 		assert(themeSelect instanceof HTMLSelectElement, 'Expected the theme select to render')
 		assert(wallpaperSelect instanceof HTMLSelectElement, 'Expected the wallpaper select to render')
 
-		themeSelect.value = 'sunset'
-		themeSelect.dispatchEvent(new Event('change', { bubbles: true }))
 		wallpaperSelect.value = 'grid'
 		wallpaperSelect.dispatchEvent(new Event('change', { bubbles: true }))
+		themeSelect.value = 'light'
+		themeSelect.dispatchEvent(new Event('change', { bubbles: true }))
 		await app.updateComplete
 
 		const shell = this.find(app, '.shell')
-		const storedPreferences = JSON.parse(window.localStorage.getItem('web-os-shell-preferences') ?? '{}')
+		const storedPreferences = JSON.parse(window.localStorage.getItem('lll.settings.v1') ?? '{}')
 		const storedTheme = typeof storedPreferences.theme === 'string' ? storedPreferences.theme : ''
 		const storedWallpaper = typeof storedPreferences.wallpaper === 'string' ? storedPreferences.wallpaper : ''
 		const renderedTheme = shell?.getAttribute('data-theme') ?? ''
 		const renderedWallpaper = shell?.getAttribute('data-wallpaper') ?? ''
-		assert(storedTheme === 'sunset', 'Expected theme preference to persist as sunset')
+		assert(storedTheme === 'light', 'Expected theme preference to persist as light')
 		assert(storedWallpaper === 'grid', 'Expected wallpaper preference to persist as grid')
-		assert(renderedTheme === 'sunset', 'Expected shell theme attribute to update')
-		assert(renderedWallpaper === 'grid', 'Expected shell wallpaper attribute to update')
+		assert(renderedTheme === 'light', 'Expected shell theme attribute to update')
+		assert(renderedWallpaper === 'grid', 'Expected shell wallpaper attribute to remain independent')
 		return { storedTheme, storedWallpaper, renderedTheme, renderedWallpaper }
+	}
+
+	@Scenario('opens the Text Editor from the launcher and marks it as running in the shell')
+	static async opensTextEditorFromLauncher(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ hasWindow: boolean, title: string, dockRunning: string | null }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before opening Text Editor')
+		this.click(app, '[data-testid="launcher-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected Text Editor window to open from the launcher')
+		const hasWindow = this.find(app, '[data-testid="window-text-editor"]') !== null
+		const title = this.readWindowTitle(app, 'text-editor')
+		const dockRunning = this.find(app, '[data-testid="dock-app-text-editor"]')?.getAttribute('data-running')
+		assert(hasWindow, 'Expected Text Editor window to be visible after launcher open')
+		assert(title === 'Text Editor', 'Expected Text Editor to use its default shell title before a file is opened')
+		assert(dockRunning === 'true', 'Expected the dock to mark Text Editor as running after launch')
+		return { hasWindow, title, dockRunning }
+	}
+
+	@Scenario('opens and closes the Image Viewer from the launcher without breaking the shell')
+	static async opensAndClosesImageViewer(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ opened: boolean, closed: boolean, fileManagerStillVisible: boolean }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before opening Image Viewer')
+		this.click(app, '[data-testid="launcher-app-image-viewer"]')
+		await waitFor(() => this.find(app, '[data-testid="window-image-viewer"]') !== null, 'Expected Image Viewer window to open from the launcher')
+		const opened = this.find(app, '[data-testid="window-image-viewer"]') !== null
+		this.click(app, '[data-testid="close-image-viewer"]')
+		await app.updateComplete
+		const closed = this.find(app, '[data-testid="window-image-viewer"]') === null
+		const fileManagerStillVisible = this.find(app, '[data-testid="window-file-manager"]') !== null
+		assert(opened, 'Expected Image Viewer to open from the launcher')
+		assert(closed, 'Expected Image Viewer to close cleanly from the shell control')
+		assert(fileManagerStillVisible, 'Expected the seeded File Manager window to remain unaffected')
+		return { opened, closed, fileManagerStillVisible }
 	}
 
 	@Spec('Waits until the paired App host has rendered its shadow UI.')
 	private static async waitForApp(app: App, waitFor: WaitForFn): Promise<void> {
 		await waitFor(() => app.shadowRoot !== null, 'Expected app-root shadow DOM to render')
 		await app.updateComplete
+	}
+
+	@Spec('Waits until the nested File Manager view and its shadow DOM are available inside the App shell.')
+	private static async waitForFileManager(app: App, waitFor: WaitForFn): Promise<void> {
+		await waitFor(() => this.find(app, 'iva-file-manager-view') !== null, 'Expected the File Manager host element to render inside the shell')
+		await waitFor(() => this.findInFileManager(app, '[data-testid="file-manager-view"]') !== null, 'Expected the File Manager shadow UI to render inside the shell')
 	}
 
 	@Spec('Finds one element in the paired App shadow root.')
@@ -167,14 +255,179 @@ export class AppTest {
 		element.click()
 	}
 
+	@Spec('Finds the visible node element that matches one exact node name in the nested File Manager shadow root.')
+	private static findNodeByName(app: App, nodeName: string): HTMLElement | null {
+		return this.findAllInFileManager(app, '[data-testid^="file-manager-node-"]').find(node => node.getAttribute('data-node-name') === nodeName) ?? null
+	}
+
+	@Spec('Clicks the visible node entry that matches one exact node name.')
+	private static clickByNodeName(app: App, nodeName: string): void {
+		const node = this.findNodeByName(app, nodeName)
+		if (node === null) {
+			throw new Error(`Expected node to exist for name: ${nodeName}`)
+		}
+		node.click()
+	}
+
+	@Spec('Double-clicks the visible node entry that matches one exact node name.')
+	private static doubleClickByNodeName(app: App, nodeName: string): void {
+		const node = this.findNodeByName(app, nodeName)
+		if (node === null) {
+			throw new Error(`Expected node to exist for name: ${nodeName}`)
+		}
+		node.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+	}
+
+	@Spec('Reads text content from one element in the paired App shadow root.')
+	private static readText(app: App, selector: string): string {
+		const element = this.find(app, selector)
+		if (element === null) {
+			throw new Error(`Expected text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
+	}
+
+	@Spec('Reads the visible outer shell window title for one app.')
+	private static readWindowTitle(app: App, appId: string): string {
+		return this.readText(app, `[data-testid="window-${appId}"] .window-title div div`)
+	}
+
+	@Spec('Reads the current Text Editor textarea value from the nested Text Editor shadow root.')
+	private static readTextAreaValue(app: App): string {
+		const textarea = this.findInTextEditor(app, '[data-testid="text-editor-textarea"]')
+		if (!(textarea instanceof HTMLTextAreaElement)) {
+			throw new Error('Expected text editor textarea to exist')
+		}
+		return textarea.value
+	}
+
+	@Spec('Closes and reopens the File Manager window to simulate a fresh relaunch against persisted shared VFS state.')
+	private static async closeAndReopenFileManagerAtDocuments(app: App, waitFor: WaitForFn): Promise<void> {
+		this.click(app, '[data-testid="close-file-manager"]')
+		this.click(app, '[data-testid="dock-app-file-manager"]')
+		await waitFor(() => this.find(app, '[data-testid="window-file-manager"]') !== null, 'Expected File Manager to reopen from the dock')
+		await this.waitForFileManager(app, waitFor)
+		this.clickInFileManager(app, '[data-testid="file-manager-sidebar-Documents"]')
+		await waitFor(() => this.readTextInFileManager(app, '[data-testid="file-manager-current-folder"]') === 'Documents', 'Expected Documents to be restored before reopening the file')
+	}
+
+	@Spec('Finds one element inside the nested File Manager shadow root by selector.')
+	private static findInFileManager(app: App, selector: string): HTMLElement | null {
+		const fileManager = this.find(app, 'iva-file-manager-view')
+		return fileManager?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Finds all matching elements inside the nested File Manager shadow root by selector.')
+	private static findAllInFileManager(app: App, selector: string): HTMLElement[] {
+		const fileManager = this.find(app, 'iva-file-manager-view')
+		return Array.from(fileManager?.shadowRoot?.querySelectorAll<HTMLElement>(selector) ?? [])
+	}
+
+	@Spec('Clicks one element inside the nested File Manager shadow root by selector.')
+	private static clickInFileManager(app: App, selector: string): void {
+		const element = this.findInFileManager(app, selector)
+		if (element === null) {
+			throw new Error(`Expected File Manager element to exist for selector: ${selector}`)
+		}
+		element.click()
+	}
+
+	@Spec('Reads text content from one element inside the nested File Manager shadow root.')
+	private static readTextInFileManager(app: App, selector: string): string {
+		const element = this.findInFileManager(app, selector)
+		if (element === null) {
+			throw new Error(`Expected File Manager text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
+	}
+
+	@Spec('Finds one element inside the nested Text Editor shadow root by selector.')
+	private static findInTextEditor(app: App, selector: string): HTMLElement | null {
+		const textEditor = this.find(app, 'iva-text-editor-view')
+		return textEditor?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Clicks one element inside the nested Text Editor shadow root by selector.')
+	private static clickInTextEditor(app: App, selector: string): void {
+		const element = this.findInTextEditor(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Text Editor element to exist for selector: ${selector}`)
+		}
+		element.click()
+	}
+
+	@Spec('Reads text content from one element inside the nested Text Editor shadow root.')
+	private static readTextInTextEditor(app: App, selector: string): string {
+		const element = this.findInTextEditor(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Text Editor text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
+	}
+
+	@Spec('Finds one element inside the nested Image Viewer shadow root by selector.')
+	private static findInImageViewer(app: App, selector: string): HTMLElement | null {
+		const imageViewer = this.find(app, 'iva-image-viewer-view')
+		return imageViewer?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Reads text content from one element inside the nested Image Viewer shadow root.')
+	private static readTextInImageViewer(app: App, selector: string): string {
+		const element = this.findInImageViewer(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Image Viewer text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
+	}
+
 	@Spec('Reads a numeric pixel offset from an inline style declaration.')
 	private static readPixelOffset(element: HTMLElement, propertyName: 'left' | 'top'): number {
 		const inlineValue = element.style.getPropertyValue(propertyName)
 		return Number.parseFloat(inlineValue.replace('px', ''))
 	}
 
-	@Spec('Clears the dedicated shell preference storage key used by the paired App host.')
+	@Spec('Reads a numeric pixel width or height from an inline style declaration.')
+	private static readPixelSize(element: HTMLElement, propertyName: 'width' | 'height'): number {
+		const inlineValue = element.style.getPropertyValue(propertyName)
+		return Number.parseFloat(inlineValue.replace('px', ''))
+	}
+
+	@Spec('Clears dedicated shell and VFS storage keys used by App behavioral tests.')
 	private static resetShellStorage(): void {
-		window.localStorage.removeItem('web-os-shell-preferences')
+		window.localStorage.removeItem('lll.settings.v1')
+		window.localStorage.removeItem('ivaos-shell-preferences')
+		window.localStorage.removeItem('iva.vfs.v1')
+	}
+
+	@Spec('Builds one deterministic VFS schema with a seeded image file for image-viewer integration testing.')
+	private static buildSeededImageSchema(): unknown {
+		const createdAt = new Date('2025-01-01T09:41:00.000Z').toISOString()
+		const imageDataUrl = 'data:image/jpeg;base64,ZmFrZS1pbWFnZS1kYXRh'
+		return {
+			version: 1,
+			rootId: 'node-1',
+			nodesById: {
+				'node-1': { id: 'node-1', kind: 'folder', name: '', parentId: null, mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-2': { id: 'node-2', kind: 'folder', name: 'Desktop', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-3': { id: 'node-3', kind: 'folder', name: 'Documents', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-4': { id: 'node-4', kind: 'folder', name: 'Downloads', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-5': { id: 'node-5', kind: 'folder', name: 'Pictures', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-6': { id: 'node-6', kind: 'folder', name: 'Wallpapers', parentId: 'node-5', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
+				'node-7': { id: 'node-7', kind: 'file', name: 'README.txt', parentId: 'node-3', mimeType: 'text/plain', extension: 'txt', size: 6, createdAt, updatedAt: createdAt },
+				'node-8': { id: 'node-8', kind: 'file', name: 'Sample.jpg', parentId: 'node-5', mimeType: 'image/jpeg', extension: 'jpg', size: imageDataUrl.length, createdAt, updatedAt: createdAt, thumbnailDataUrl: imageDataUrl }
+			},
+			childrenById: {
+				'node-1': ['node-2', 'node-3', 'node-4', 'node-5'],
+				'node-2': [],
+				'node-3': ['node-7'],
+				'node-4': [],
+				'node-5': ['node-6', 'node-8'],
+				'node-6': []
+			},
+			fileContentsById: {
+				'node-7': { encoding: 'utf8', data: 'Seeded' },
+				'node-8': { encoding: 'data-url', data: imageDataUrl }
+			}
+		}
 	}
 }
