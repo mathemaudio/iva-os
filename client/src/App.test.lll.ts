@@ -397,37 +397,16 @@ export class AppTest {
 		window.localStorage.removeItem('lll.settings.v1')
 		window.localStorage.removeItem('ivaos-shell-preferences')
 		window.localStorage.removeItem('iva.vfs.v1')
-	}
-
-	@Spec('Builds one deterministic VFS schema with a seeded image file for image-viewer integration testing.')
-	private static buildSeededImageSchema(): unknown {
-		const createdAt = new Date('2025-01-01T09:41:00.000Z').toISOString()
-		const imageDataUrl = 'data:image/jpeg;base64,ZmFrZS1pbWFnZS1kYXRh'
-		return {
-			version: 1,
-			rootId: 'node-1',
-			nodesById: {
-				'node-1': { id: 'node-1', kind: 'folder', name: '', parentId: null, mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-2': { id: 'node-2', kind: 'folder', name: 'Desktop', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-3': { id: 'node-3', kind: 'folder', name: 'Documents', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-4': { id: 'node-4', kind: 'folder', name: 'Downloads', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-5': { id: 'node-5', kind: 'folder', name: 'Pictures', parentId: 'node-1', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-6': { id: 'node-6', kind: 'folder', name: 'Wallpapers', parentId: 'node-5', mimeType: null, extension: null, size: 0, createdAt, updatedAt: createdAt },
-				'node-7': { id: 'node-7', kind: 'file', name: 'README.txt', parentId: 'node-3', mimeType: 'text/plain', extension: 'txt', size: 6, createdAt, updatedAt: createdAt },
-				'node-8': { id: 'node-8', kind: 'file', name: 'Sample.jpg', parentId: 'node-5', mimeType: 'image/jpeg', extension: 'jpg', size: imageDataUrl.length, createdAt, updatedAt: createdAt, thumbnailDataUrl: imageDataUrl }
-			},
-			childrenById: {
-				'node-1': ['node-2', 'node-3', 'node-4', 'node-5'],
-				'node-2': [],
-				'node-3': ['node-7'],
-				'node-4': [],
-				'node-5': ['node-6', 'node-8'],
-				'node-6': []
-			},
-			fileContentsById: {
-				'node-7': { encoding: 'utf8', data: 'Seeded' },
-				'node-8': { encoding: 'data-url', data: imageDataUrl }
+		window.localStorage.removeItem('iva.vfs.v2')
+		const nodeKeysToRemove: string[] = []
+		for (let index = 0; index < window.localStorage.length; index += 1) {
+			const key = window.localStorage.key(index)
+			if (typeof key === 'string' && key.startsWith('iva.node-')) {
+				nodeKeysToRemove.push(key)
 			}
+		}
+		for (const nodeKey of nodeKeysToRemove) {
+			window.localStorage.removeItem(nodeKey)
 		}
 	}
 }

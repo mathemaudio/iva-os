@@ -171,8 +171,11 @@ export class App extends LitElement {
 			return true
 		}
 		const fileNode = snapshot.schema.nodesById[wallpaperId] ?? null
-		const fileContent = snapshot.schema.fileContentsById[wallpaperId]
-		return fileNode?.kind === 'file' && fileContent?.encoding === 'data-url'
+		if (fileNode?.kind !== 'file') {
+			return false
+		}
+		const fileContent = this.virtualFileSystemService.readBinaryFile(wallpaperId)
+		return typeof fileContent === 'string'
 	}
 
 	@Spec('Toggles the launcher panel visibility.')
@@ -531,7 +534,7 @@ export class App extends LitElement {
 	@Spec('Renders the full operating shell UI.')
 	render(): TemplateResult {
 		const focusedWindowId = this.getFocusedWindowId()
-		const wallpaperStyle = ShellWallpaperCatalog.getBackgroundStyle(this.activeWallpaper, this.vfsSnapshot)
+		const wallpaperStyle = ShellWallpaperCatalog.getBackgroundStyle(this.activeWallpaper, this.vfsSnapshot, fileId => this.virtualFileSystemService.readBinaryFile(fileId))
 		return html`
 			<div class="shell" data-theme=${this.activeTheme} data-wallpaper=${this.activeWallpaper} style=${wallpaperStyle}>
 				<header class="top-bar" data-testid="top-bar">

@@ -39,15 +39,18 @@ export class ShellWallpaperCatalog {
 	}
 
 	@Spec('Returns the inline background style for the currently active wallpaper selection, falling back to Aurora when needed.')
-	static getBackgroundStyle(activeWallpaper: string, snapshot: VirtualFileSystemContract['Snapshot']): string {
+	static getBackgroundStyle(activeWallpaper: string, snapshot: VirtualFileSystemContract['Snapshot'], readBinaryFile: (fileId: string) => string | null): string {
 		const builtInChoice = this.builtInWallpapers.find(choice => choice.id === activeWallpaper)
 		if (builtInChoice !== undefined) {
 			return builtInChoice.style
 		}
 		const wallpaperNode = snapshot.schema.nodesById[activeWallpaper]
-		const fileContent = snapshot.schema.fileContentsById[activeWallpaper]
-		if (wallpaperNode?.kind === 'file' && fileContent?.encoding === 'data-url') {
-			return `background-image: url(${fileContent.data}); background-size: cover; background-position: center; background-repeat: no-repeat;`
+		if (wallpaperNode?.kind !== 'file') {
+			return this.builtInWallpapers[0].style
+		}
+		const fileContent = readBinaryFile(activeWallpaper)
+		if (typeof fileContent === 'string') {
+			return `background-image: url(${fileContent}); background-size: cover; background-position: center; background-repeat: no-repeat;`
 		}
 		return this.builtInWallpapers[0].style
 	}

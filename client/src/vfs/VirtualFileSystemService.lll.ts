@@ -1,10 +1,10 @@
 import { Spec } from '@shared/lll.lll'
 import type { VirtualFileSystemContract } from './VirtualFileSystemContract.lll'
+import { VirtualFileSystemStorage } from './VirtualFileSystemStorage.lll'
 
 @Spec('Provides a persistent virtual filesystem with normalized nodes, seeded content, and guarded CRUD operations.')
 export class VirtualFileSystemService {
-	private static readonly storageKey = 'iva.vfs.v1'
-	private static readonly currentVersion = 1
+	private static readonly currentVersion = 2
 
 	private readonly storage: VirtualFileSystemContract['StorageLike'] | null
 	private readonly saveDebounceMs: number
@@ -32,35 +32,27 @@ export class VirtualFileSystemService {
 			return this.getSnapshot()
 		}
 
-		try {
-			const rawSchema = this.storage.getItem(VirtualFileSystemService.storageKey)
-			if (rawSchema === null) {
-				this.schema = this.createSeedSchema()
-				this.nextIdCounter = this.deriveNextIdCounter(this.schema)
-				this.save()
-				return this.getSnapshot()
-			}
-
-			const parsedSchema: unknown = JSON.parse(rawSchema)
-			const migratedSchema = this.migrateSchema(parsedSchema)
-			if (migratedSchema === null) {
-				this.warning = 'Stored filesystem data was corrupt and has been reset to a clean seed.'
-				this.schema = this.createSeedSchema()
-				this.nextIdCounter = this.deriveNextIdCounter(this.schema)
-				this.save()
-				return this.getSnapshot()
-			}
-
-			this.schema = migratedSchema
-			this.nextIdCounter = this.deriveNextIdCounter(this.schema)
-			return this.getSnapshot()
-		} catch {
-			this.warning = 'Stored filesystem data could not be read and has been reset to a clean seed.'
+		const persistenceResult = VirtualFileSystemStorage.read(this.storage)
+		if (persistenceResult.kind === 'missing') {
 			this.schema = this.createSeedSchema()
 			this.nextIdCounter = this.deriveNextIdCounter(this.schema)
 			this.save()
 			return this.getSnapshot()
 		}
+		if (persistenceResult.kind === 'corrupt') {
+			this.warning = persistenceResult.warning
+			this.schema = this.createSeedSchema()
+			this.nextIdCounter = this.deriveNextIdCounter(this.schema)
+			this.save()
+			return this.getSnapshot()
+		}
+		this.warning = persistenceResult.warning
+		this.schema = persistenceResult.schema
+		this.nextIdCounter = this.deriveNextIdCounter(this.schema)
+		if (persistenceResult.shouldRewrite) {
+			this.save()
+		}
+		return this.getSnapshot()
 	}
 
 	@Spec('Persists the current filesystem snapshot immediately when storage is available.')
@@ -73,7 +65,7 @@ export class VirtualFileSystemService {
 			return
 		}
 		try {
-			this.storage.setItem(VirtualFileSystemService.storageKey, JSON.stringify(this.schema))
+			VirtualFileSystemStorage.write(this.storage, this.schema)
 		} catch {
 			this.warning = 'Filesystem changes could not be saved to local storage.'
 		}
@@ -394,58 +386,6 @@ export class VirtualFileSystemService {
 		}
 	}
 
-	@Spec('Migrates a parsed stored schema into the current normalized version when the stored structure is recognizable.')
-	private migrateSchema(parsedSchema: unknown): VirtualFileSystemContract['Schema'] | null {
-		if (typeof parsedSchema !== 'object' || parsedSchema === null) {
-			return null
-		}
-		const maybeVersion = Reflect.get(parsedSchema, 'version')
-		if (maybeVersion === VirtualFileSystemService.currentVersion) {
-			return this.normalizeSchema(parsedSchema)
-		}
-		if (maybeVersion === undefined) {
-			const normalizedSchema = this.normalizeSchema({ ...parsedSchema, version: VirtualFileSystemService.currentVersion })
-			if (normalizedSchema !== null) {
-				this.warning = 'Filesystem data was migrated to the latest schema version.'
-			}
-			return normalizedSchema
-		}
-		return null
-	}
-
-	@Spec('Validates and normalizes a candidate schema object into the minimal structure required by the current service implementation.')
-	private normalizeSchema(candidateSchema: unknown): VirtualFileSystemContract['Schema'] | null {
-		if (typeof candidateSchema !== 'object' || candidateSchema === null) {
-			return null
-		}
-		const version = Reflect.get(candidateSchema, 'version')
-		const rootId = Reflect.get(candidateSchema, 'rootId')
-		const nodesById = Reflect.get(candidateSchema, 'nodesById')
-		const childrenById = Reflect.get(candidateSchema, 'childrenById')
-		const fileContentsById = Reflect.get(candidateSchema, 'fileContentsById')
-		if (typeof version !== 'number' || typeof rootId !== 'string') {
-			return null
-		}
-		if (typeof nodesById !== 'object' || nodesById === null) {
-			return null
-		}
-		if (typeof childrenById !== 'object' || childrenById === null) {
-			return null
-		}
-		if (typeof fileContentsById !== 'object' || fileContentsById === null) {
-			return null
-		}
-		if (!(rootId in nodesById)) {
-			return null
-		}
-		return this.cloneSchema({
-			version,
-			rootId,
-			nodesById: nodesById as Record<string, VirtualFileSystemContract['Node']>,
-			childrenById: childrenById as Record<string, string[]>,
-			fileContentsById: fileContentsById as Record<string, VirtualFileSystemContract['FileContent']>
-		})
-	}
 
 	@Spec('Returns the browser localStorage object when available to the current runtime.')
 	private resolveDefaultStorage(): VirtualFileSystemContract['StorageLike'] | null {

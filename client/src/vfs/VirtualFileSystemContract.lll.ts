@@ -6,6 +6,8 @@ export type VirtualFileSystemContract = {
 		getItem: (key: string) => string | null
 		setItem: (key: string, value: string) => void
 		removeItem: (key: string) => void
+		length?: number
+		key?: (index: number) => string | null
 	}
 	FileSource: {
 		provider: 'unsplash'
@@ -14,6 +16,7 @@ export type VirtualFileSystemContract = {
 		downloadUrl: string
 	}
 	FileContent: { encoding: 'utf8', data: string } | { encoding: 'data-url', data: string }
+	FileContentsById: Record<string, VirtualFileSystemContract['FileContent']>
 	Node: {
 		id: string
 		kind: 'folder' | 'file'
@@ -32,11 +35,29 @@ export type VirtualFileSystemContract = {
 		rootId: string
 		nodesById: Record<string, VirtualFileSystemContract['Node']>
 		childrenById: Record<string, string[]>
-		fileContentsById: Record<string, VirtualFileSystemContract['FileContent']>
+		fileContentsById: VirtualFileSystemContract['FileContentsById']
+	}
+	StoredSchema: {
+		version: number
+		rootId: string
+		nodesById: Record<string, VirtualFileSystemContract['Node']>
+		childrenById: Record<string, string[]>
 	}
 	Snapshot: {
 		schema: VirtualFileSystemContract['Schema']
 		warning: string | null
 	}
+	PersistenceReadResult:
+		| { kind: 'missing' }
+		| {
+			kind: 'loaded'
+			schema: VirtualFileSystemContract['Schema']
+			warning: string | null
+			shouldRewrite: boolean
+		}
+		| {
+			kind: 'corrupt'
+			warning: string
+		}
 	SubscriptionListener: (snapshot: VirtualFileSystemContract['Snapshot']) => void
 }
