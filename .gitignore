@@ -54,3 +54,4 @@ llm-raw-stream.txt
 .lll/prompts/
 
 .lll/snapshots
+plan.*

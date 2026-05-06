@@ -2,52 +2,104 @@ import './App.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec, SubjectFactory, WaitForFn } from '@shared/lll.lll'
 import { App } from './App.lll'
 
-@Spec('Exercises the paired App host through visible UI interactions only.')
+@Spec('Exercises the Web OS shell through visible UI interactions only.')
 export class AppTest {
 	testType = 'behavioral'
 
-	@Scenario('shows the app copy, calculator toggle button, and LLL corner link')
-	static async rendersAppShell(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ buttonLabel: string, cornerLinkLabel: string }> {
+	@Scenario('shows the desktop shell with top bar, dock, and seeded file manager window')
+	static async rendersShellChrome(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ topBar: boolean, dockButtons: number, seededWindow: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
 		const app = await subjectFactory()
 		await this.waitForApp(app, waitFor)
 
-		const content = app.shadowRoot?.querySelector<HTMLElement>('#example-content')
-		assert(content !== null && content !== undefined, 'Expected the app content shell to render')
-		const cornerLink = app.shadowRoot?.querySelector<HTMLAnchorElement>('.lll-corner-link')
-		assert(cornerLink !== null && cornerLink !== undefined, 'Expected the bottom-left LLL corner link to render')
-		assert(cornerLink.href === 'https://lllts.dev/', 'Expected the corner badge to link to the LLL website')
-		assert(cornerLink.textContent?.trim() === 'made with LLL', 'Expected the corner badge to show made with LLL text')
-		const button = this.getToggleButton(app)
-		assert(button.textContent?.trim() === 'Open calculator', 'Expected the default toggle button label to be Open calculator')
-		return {
-			buttonLabel: button.textContent?.trim() ?? '',
-			cornerLinkLabel: cornerLink.textContent?.trim() ?? ''
-		}
+		const topBar = app.shadowRoot?.querySelector<HTMLElement>('[data-testid="top-bar"]')
+		const dock = app.shadowRoot?.querySelector<HTMLElement>('[data-testid="dock"]')
+		const seededWindow = app.shadowRoot?.querySelector<HTMLElement>('[data-testid="window-file-manager"]')
+		const dockButtons = app.shadowRoot?.querySelectorAll('[data-testid^="dock-app-"]').length ?? 0
+		assert(topBar !== null && topBar !== undefined, 'Expected the top bar to render')
+		assert(dock !== null && dock !== undefined, 'Expected the dock to render')
+		assert(seededWindow !== null && seededWindow !== undefined, 'Expected the seeded file manager window to render')
+		assert(dockButtons >= 3, 'Expected pinned dock apps to be visible')
+		return { topBar: true, dockButtons, seededWindow: true }
 	}
 
-	@Scenario('toggles calculator visibility from the paired host')
-	static async togglesCalculatorPanel(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ opened: boolean, closed: boolean }> {
+	@Scenario('opens a second app from the launcher and manages its window state')
+	static async opensAndManagesMultipleWindows(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ openWindowsBeforeMinimize: number, restoredVisible: boolean, maximized: boolean, closed: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
 		const app = await subjectFactory()
 		await this.waitForApp(app, waitFor)
 
-		const button = this.getToggleButton(app)
-		button.click()
-		await app.updateComplete
-		await waitFor(() => this.findCalculator(app) !== null, 'Expected calculator-panel to appear after opening the calculator')
-		const opened = this.findCalculator(app) !== null
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open')
+		this.click(app, '[data-testid="launcher-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected text editor window to open')
 
-		this.getToggleButton(app).click()
-		await app.updateComplete
-		await waitFor(() => this.findCalculator(app) === null, 'Expected calculator-panel to disappear after closing the calculator')
-		const closed = this.findCalculator(app) === null
+		const openWindowsBeforeMinimize = this.findAll(app, '.window-shell').length
+		assert(openWindowsBeforeMinimize >= 2, 'Expected at least two windows to be visible at once')
 
-		assert(opened, 'Expected calculator to become visible after the first click')
-		assert(closed, 'Expected calculator to disappear after the second click')
-		return { opened, closed }
+		const fileManagerWindowBeforeFocus = this.find(app, '[data-testid="window-file-manager"]')
+		const textEditorWindowBeforeFocus = this.find(app, '[data-testid="window-text-editor"]')
+		assert(fileManagerWindowBeforeFocus?.getAttribute('data-focused') === 'false', 'Expected file manager to lose focus after opening text editor')
+		assert(textEditorWindowBeforeFocus?.getAttribute('data-focused') === 'true', 'Expected text editor to receive focus after opening')
+
+		this.click(app, '[data-testid="minimize-text-editor"]')
+		await app.updateComplete
+		assert(this.find(app, '[data-testid="window-text-editor"]') === null, 'Expected text editor window to disappear when minimized')
+
+		this.click(app, '[data-testid="dock-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected dock click to restore the minimized window')
+		const restoredVisible = this.find(app, '[data-testid="window-text-editor"]') !== null
+
+		this.click(app, '[data-testid="maximize-text-editor"]')
+		await app.updateComplete
+		const maximizedWindow = this.find(app, '[data-testid="window-text-editor"]')
+		const maximized = maximizedWindow?.getAttribute('data-maximized') === 'true'
+		assert(maximized, 'Expected maximize control to mark the window as maximized')
+
+		this.click(app, '[data-testid="close-text-editor"]')
+		await app.updateComplete
+		const closed = this.find(app, '[data-testid="window-text-editor"]') === null
+		assert(closed, 'Expected close control to remove the text editor window')
+		return { openWindowsBeforeMinimize, restoredVisible, maximized, closed }
+	}
+
+	@Scenario('changes theme and wallpaper in settings and persists them in local storage')
+	static async persistsShellPreferences(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ storedTheme: string, storedWallpaper: string, renderedTheme: string, renderedWallpaper: string }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="dock-app-settings"]')
+		await waitFor(() => this.find(app, '[data-testid="window-settings"]') !== null, 'Expected settings window to open from the dock')
+
+		const themeSelect = this.find(app, '[data-testid="theme-select"]')
+		const wallpaperSelect = this.find(app, '[data-testid="wallpaper-select"]')
+		assert(themeSelect instanceof HTMLSelectElement, 'Expected the theme select to render')
+		assert(wallpaperSelect instanceof HTMLSelectElement, 'Expected the wallpaper select to render')
+
+		themeSelect.value = 'sunset'
+		themeSelect.dispatchEvent(new Event('change', { bubbles: true }))
+		wallpaperSelect.value = 'grid'
+		wallpaperSelect.dispatchEvent(new Event('change', { bubbles: true }))
+		await app.updateComplete
+
+		const shell = this.find(app, '.shell')
+		const storedPreferences = JSON.parse(window.localStorage.getItem('web-os-shell-preferences') ?? '{}')
+		const storedTheme = typeof storedPreferences.theme === 'string' ? storedPreferences.theme : ''
+		const storedWallpaper = typeof storedPreferences.wallpaper === 'string' ? storedPreferences.wallpaper : ''
+		const renderedTheme = shell?.getAttribute('data-theme') ?? ''
+		const renderedWallpaper = shell?.getAttribute('data-wallpaper') ?? ''
+		assert(storedTheme === 'sunset', 'Expected theme preference to persist as sunset')
+		assert(storedWallpaper === 'grid', 'Expected wallpaper preference to persist as grid')
+		assert(renderedTheme === 'sunset', 'Expected shell theme attribute to update')
+		assert(renderedWallpaper === 'grid', 'Expected shell wallpaper attribute to update')
+		return { storedTheme, storedWallpaper, renderedTheme, renderedWallpaper }
 	}
 
 	@Spec('Waits until the paired App host has rendered its shadow UI.')
@@ -56,17 +108,27 @@ export class AppTest {
 		await app.updateComplete
 	}
 
-	@Spec('Returns the visible toggle button rendered by the paired App host.')
-	private static getToggleButton(app: App): HTMLButtonElement {
-		const button = app.shadowRoot?.querySelector<HTMLButtonElement>('button')
-		if (button === null || button === undefined) {
-			throw new Error('Expected the app calculator toggle button to exist')
-		}
-		return button
+	@Spec('Finds one element in the paired App shadow root.')
+	private static find(app: App, selector: string): HTMLElement | null {
+		return app.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
 	}
 
-	@Spec('Returns the currently rendered calculator panel when visible.')
-	private static findCalculator(app: App): HTMLElement | null {
-		return app.shadowRoot?.querySelector<HTMLElement>('calculator-panel') ?? null
+	@Spec('Finds all matching elements in the paired App shadow root.')
+	private static findAll(app: App, selector: string): HTMLElement[] {
+		return Array.from(app.shadowRoot?.querySelectorAll<HTMLElement>(selector) ?? [])
+	}
+
+	@Spec('Clicks an element in the paired App shadow root by selector.')
+	private static click(app: App, selector: string): void {
+		const element = this.find(app, selector)
+		if (element === null) {
+			throw new Error(`Expected element to exist for selector: ${selector}`)
+		}
+		element.click()
+	}
+
+	@Spec('Clears the dedicated shell preference storage key used by the paired App host.')
+	private static resetShellStorage(): void {
+		window.localStorage.removeItem('web-os-shell-preferences')
 	}
 }
