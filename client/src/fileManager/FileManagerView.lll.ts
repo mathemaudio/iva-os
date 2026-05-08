@@ -6,27 +6,21 @@ import { FileManagerSnapshot } from './FileManagerSnapshot.lll'
 import { FileManagerViewStyles } from './FileManagerViewStyles.lll'
 import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
-
 @Spec('Renders the Sprint 2 file manager browsing experience on top of the shared virtual filesystem service.')
 @customElement('iva-file-manager-view')
 export class FileManagerView extends LitElement {
 	static styles = FileManagerViewStyles.styles
-
 	@property({ attribute: false })
 	platformContext: PlatformContract['ApplicationContext'] | null = null
-
 	@state()
 	private snapshot: VirtualFileSystemContract['Snapshot'] | null = null
-
 	@state()
 	private currentFolderId: string = ''
 
 	@state()
 	private selectedNodeId: string | null = null
-
 	@state()
 	private focusedNodeId: string | null = null
-
 	@state()
 	private viewMode: 'grid' | 'list' = 'grid'
 
@@ -212,7 +206,7 @@ export class FileManagerView extends LitElement {
 				data-node-kind=${node.kind}
 				data-selected=${String(this.selectedNodeId === node.id)}
 				data-focused=${String(this.focusedNodeId === node.id)}
-				@click=${() => this.selectNode(node.id)}
+				@click=${() => node.kind === 'folder' ? this.activateNode(node.id) : this.selectNode(node.id)}
 				@dblclick=${() => this.activateNode(node.id)}
 				@focus=${() => this.focusNode(node.id)}
 				@keydown=${(event: KeyboardEvent) => this.onNodeKeyDown(node.id, event)}
@@ -390,13 +384,16 @@ export class FileManagerView extends LitElement {
 		if (node === null) {
 			return
 		}
+		if (node.kind === 'folder') {
+			if (this.platformContext !== null) {
+				this.platformContext.launcher.openNode(node.id, this.getCurrentFolderNode()?.id ?? this.snapshot.schema.rootId)
+			}
+			this.navigateToFolder(node.id)
+			return
+		}
 		this.selectNode(node.id)
 		if (this.platformContext !== null) {
 			this.platformContext.launcher.openNode(node.id, this.getCurrentFolderNode()?.id ?? this.snapshot.schema.rootId)
-			return
-		}
-		if (node.kind === 'folder') {
-			this.navigateToFolder(node.id)
 		}
 	}
 

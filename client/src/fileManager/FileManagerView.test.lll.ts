@@ -23,6 +23,24 @@ export class FileManagerViewTest {
 		return { currentFolder, breadcrumbCount }
 	}
 
+	@Scenario('clicking a folder row in list view opens that folder from the main listing')
+	static async opensFolderFromListViewRow(subjectFactory: SubjectFactory<FileManagerView>, scenario: ScenarioParameter): Promise<{ currentFolderAfterOpen: string, rootFolderGone: boolean, listViewVisible: boolean }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		const fileManager = await this.createPreparedFileManager(subjectFactory, waitFor)
+		this.click(fileManager, '[data-testid="file-manager-action-toggle-view"]')
+		await waitFor(() => this.readViewMode(fileManager) === 'list', 'Expected File Manager to switch into list mode before opening a folder row')
+		this.clickByNodeName(fileManager, 'Documents')
+		await waitFor(() => this.readText(fileManager, '[data-testid="file-manager-current-folder"]') === 'Documents', 'Expected clicking the Documents folder row in list view to open that folder')
+		const currentFolderAfterOpen = this.readText(fileManager, '[data-testid="file-manager-current-folder"]')
+		const rootFolderGone = this.hasNodeNamed(fileManager, 'Desktop') === false
+		const listViewVisible = this.find(fileManager, '[data-testid="file-manager-list-view"]') !== null
+		assert(currentFolderAfterOpen === 'Documents', 'Expected the clicked list row folder to become the current folder')
+		assert(rootFolderGone, 'Expected the root Desktop folder row to disappear after navigating into Documents')
+		assert(listViewVisible, 'Expected File Manager to remain in list view after opening the folder row')
+		return { currentFolderAfterOpen, rootFolderGone, listViewVisible }
+	}
+
 	@Scenario('grid and list view toggle preserves folder context and selection')
 	static async togglesGridAndListPreservingContext(subjectFactory: SubjectFactory<FileManagerView>, scenario: ScenarioParameter): Promise<{ initialMode: string, finalMode: string, selectedNodeName: string }> {
 		const assert: AssertFn = scenario.assert
