@@ -1,6 +1,9 @@
 import './AppWindowPresentation.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec } from '@shared/lll.lll'
 import { AppWindowPresentation } from './AppWindowPresentation.lll'
+import { PlatformAppLauncherService } from '../platform/PlatformAppLauncherService.lll'
+import { PlatformFileSystemService } from '../platform/PlatformFileSystemService.lll'
+import { PlatformSettingsService } from '../platform/PlatformSettingsService.lll'
 import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
 @Spec('Covers shell window titles and app-window body rendering helpers.')
@@ -34,24 +37,46 @@ export class AppWindowPresentationTest {
 	static async rendersSettingsWindowContent(scenario: ScenarioParameter): Promise<{ hasThemeSelect: boolean, hasWallpaperSelect: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const service = new VirtualFileSystemService(null)
-		const snapshot = service.load()
-		const content = AppWindowPresentation.renderWindowContent(
-			{ id: 1, appId: 'settings', openedNodeId: null, sourceFolderId: null },
-			'dark',
-			'aurora',
-			snapshot,
-			service,
-			() => undefined,
-			() => undefined,
-			() => undefined,
+		service.load()
+		const filesystemService = new PlatformFileSystemService(service)
+		const settingsService = new PlatformSettingsService(
+			() => ({
+				theme: 'dark',
+				wallpaper: 'aurora',
+				wallpaperChoices: [{ id: 'aurora', label: 'Aurora' }]
+			}),
 			() => undefined,
 			() => undefined
 		)
+		const launcherService = new PlatformAppLauncherService(
+			() => undefined,
+			() => undefined
+		)
+		const platformContext = {
+			appId: 'settings',
+			filesystem: filesystemService.toContract(),
+			settings: settingsService.toContract(),
+			launcher: launcherService.toContract(),
+			window: {
+				openedNodeId: null,
+				sourceFolderId: null,
+				setTitle(): void {
+					return
+				},
+				setOpenedNodeId(): void {
+					return
+				}
+			}
+		}
+		const content = AppWindowPresentation.renderWindowContent(
+			{ id: 1, appId: 'settings', openedNodeId: null, sourceFolderId: null },
+			platformContext
+		)
 		const contentText = String(content.strings.join(' '))
-		const hasThemeSelect = contentText.includes('theme-select')
-		const hasWallpaperSelect = contentText.includes('wallpaper-select')
-		assert(hasThemeSelect, 'Expected the settings window body to include the theme select marker')
-		assert(hasWallpaperSelect, 'Expected the settings window body to include the wallpaper select marker')
+		const hasThemeSelect = contentText.includes('iva-settings-view')
+		const hasWallpaperSelect = contentText.includes('iva-settings-view')
+		assert(hasThemeSelect, 'Expected the settings window body to render the settings app host element')
+		assert(hasWallpaperSelect, 'Expected the settings window body to render the settings app host element')
 		return { hasThemeSelect, hasWallpaperSelect }
 	}
 }

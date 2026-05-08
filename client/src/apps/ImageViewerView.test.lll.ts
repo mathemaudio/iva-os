@@ -1,7 +1,7 @@
 import './ImageViewerView.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec, SubjectFactory, WaitForFn } from '@shared/lll.lll'
 import { ImageViewerView } from './ImageViewerView.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
+import { PlatformTestContextFactory } from '../platform/PlatformTestContextFactory.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
 
 @Spec('Exercises the VFS-backed Image Viewer through observable open and missing-file behavior.')
@@ -12,19 +12,23 @@ export class ImageViewerViewTest {
 	static async opensImageFromVfs(subjectFactory: SubjectFactory<ImageViewerView>, scenario: ScenarioParameter): Promise<{ metadataLabel: string, imageSourcePrefix: string, title: string }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
-		const service = new VirtualFileSystemService(this.createMemoryStorage())
-		service.load()
-		const picturesFolder = service.resolvePath('/Pictures')
+		const storage = this.createMemoryStorage()
+		const seedContext = PlatformTestContextFactory.createApplicationContext('image-viewer', storage, null, null)
+		const picturesFolder = seedContext.virtualFileSystemService.resolvePath('/Pictures')
 		assert(picturesFolder !== null && picturesFolder.kind === 'folder', 'Expected the Pictures folder to exist before viewer testing')
-		const imageNode = service.createBinaryFile(picturesFolder.id, 'Poster.jpg', 'image/jpeg', 'data:image/jpeg;base64,cG9zdGVy', 'data:image/jpeg;base64,cG9zdGVy')
+		const imageNode = seedContext.virtualFileSystemService.createBinaryFile(picturesFolder.id, 'Poster.jpg', 'image/jpeg', 'data:image/jpeg;base64,cG9zdGVy', 'data:image/jpeg;base64,cG9zdGVy')
 		let title = ''
 		const viewer = await subjectFactory()
-		viewer.virtualFileSystemService = service
-		viewer.snapshot = service.getSnapshot()
-		viewer.fileNodeId = imageNode.id
-		viewer.onTitleChange = (nextTitle: string): void => {
-			title = nextTitle
-		}
+		const context = PlatformTestContextFactory.createApplicationContextFromVirtualFileSystemService(
+			'image-viewer',
+			seedContext.virtualFileSystemService,
+			imageNode.id,
+			imageNode.parentId,
+			(nextTitle: string) => {
+				title = nextTitle
+			}
+		)
+		viewer.platformContext = context.context
 		await waitFor(() => viewer.shadowRoot !== null, 'Expected Image Viewer shadow DOM to render')
 		await viewer.updateComplete
 		const metadataLabel = this.readText(viewer, '[data-testid="image-viewer-metadata"] strong')
@@ -41,26 +45,45 @@ export class ImageViewerViewTest {
 	static async showsMissingFileState(subjectFactory: SubjectFactory<ImageViewerView>, scenario: ScenarioParameter): Promise<{ title: string, errorMessage: string }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
-		const service = new VirtualFileSystemService(this.createMemoryStorage())
-		service.load()
-		const picturesFolder = service.resolvePath('/Pictures')
+		const storage = this.createMemoryStorage()
+		const seedContext = PlatformTestContextFactory.createApplicationContext('image-viewer', storage, null, null)
+		const picturesFolder = seedContext.virtualFileSystemService.resolvePath('/Pictures')
 		assert(picturesFolder !== null && picturesFolder.kind === 'folder', 'Expected the Pictures folder to exist before deletion testing')
-		const imageNode = service.createBinaryFile(picturesFolder.id, 'Poster.jpg', 'image/jpeg', 'data:image/jpeg;base64,cG9zdGVy', 'data:image/jpeg;base64,cG9zdGVy')
+		const imageNode = seedContext.virtualFileSystemService.createBinaryFile(picturesFolder.id, 'Poster.jpg', 'image/jpeg', 'data:image/jpeg;base64,cG9zdGVy', 'data:image/jpeg;base64,cG9zdGVy')
 		let title = ''
 		const viewer = await subjectFactory()
-		viewer.virtualFileSystemService = service
-		viewer.snapshot = service.getSnapshot()
-		viewer.fileNodeId = imageNode.id
-		viewer.onTitleChange = (nextTitle: string): void => {
-			title = nextTitle
-		}
+		const context = PlatformTestContextFactory.createApplicationContextFromVirtualFileSystemService(
+			'image-viewer',
+			seedContext.virtualFileSystemService,
+			imageNode.id,
+			imageNode.parentId,
+			(nextTitle: string) => {
+				title = nextTitle
+			}
+		)
+		viewer.platformContext = context.context
 		await waitFor(() => viewer.shadowRoot !== null, 'Expected Image Viewer shadow DOM to render before deletion')
 		await viewer.updateComplete
-		service.deleteNode(imageNode.id)
-		viewer.snapshot = service.getSnapshot()
-		viewer.fileNodeId = `${imageNode.id}-missing`
+		context.virtualFileSystemService.deleteNode(imageNode.id)
+		viewer.platformContext = PlatformTestContextFactory.createApplicationContextFromVirtualFileSystemService(
+			'image-viewer',
+			context.virtualFileSystemService,
+			`${imageNode.id}-missing`,
+			imageNode.parentId,
+			(nextTitle: string) => {
+				title = nextTitle
+			}
+		).context
 		await viewer.updateComplete
-		viewer.fileNodeId = imageNode.id
+		viewer.platformContext = PlatformTestContextFactory.createApplicationContextFromVirtualFileSystemService(
+			'image-viewer',
+			context.virtualFileSystemService,
+			imageNode.id,
+			imageNode.parentId,
+			(nextTitle: string) => {
+				title = nextTitle
+			}
+		).context
 		await viewer.updateComplete
 		const errorMessage = this.readText(viewer, '[data-testid="image-viewer-error"]')
 		assert(title.includes('(missing)'), 'Expected the viewer title to reflect the missing-file state after deletion')

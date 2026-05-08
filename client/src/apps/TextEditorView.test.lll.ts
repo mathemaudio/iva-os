@@ -1,7 +1,7 @@
 import './TextEditorView.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec, SubjectFactory, WaitForFn } from '@shared/lll.lll'
 import { TextEditorView } from './TextEditorView.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
+import { PlatformTestContextFactory } from '../platform/PlatformTestContextFactory.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
 
 @Spec('Exercises the VFS-backed Text Editor through observable open, save, and Save As behavior.')
@@ -12,18 +12,16 @@ export class TextEditorViewTest {
 	static async opensAndSavesExistingFile(subjectFactory: SubjectFactory<TextEditorView>, scenario: ScenarioParameter): Promise<{ titleAfterDirty: string, titleAfterSave: string, savedContent: string | null }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
-		const service = new VirtualFileSystemService(this.createMemoryStorage())
-		service.load()
-		const fileNode = service.resolvePath('/Documents/README.txt')
+		const storage = this.createMemoryStorage()
+		const seedContext = PlatformTestContextFactory.createApplicationContext('text-editor', storage, null, null)
+		const fileNode = seedContext.virtualFileSystemService.resolvePath('/Documents/README.txt')
 		assert(fileNode !== null && fileNode.kind === 'file', 'Expected the seeded README.txt file to exist before editor testing')
 		const titles: string[] = []
 		const editor = await subjectFactory()
-		editor.virtualFileSystemService = service
-		editor.snapshot = service.getSnapshot()
-		editor.fileNodeId = fileNode.id
-		editor.onTitleChange = (title: string): void => {
+		const context = PlatformTestContextFactory.createApplicationContext('text-editor', storage, fileNode.id, fileNode.parentId, (title: string) => {
 			titles.push(title)
-		}
+		})
+		editor.platformContext = context.context
 		await waitFor(() => editor.shadowRoot !== null, 'Expected Text Editor shadow DOM to render')
 		await editor.updateComplete
 		const textarea = this.find(editor, '[data-testid="text-editor-textarea"]')
@@ -35,7 +33,7 @@ export class TextEditorViewTest {
 		await editor.updateComplete
 		const titleAfterDirty = titles.find(title => title.includes('*')) ?? ''
 		const titleAfterSave = titles[titles.length - 1] ?? ''
-		const savedContent = service.readTextFile(fileNode.id)
+		const savedContent = context.virtualFileSystemService.readTextFile(fileNode.id)
 		assert(titleAfterDirty.includes('*'), 'Expected typing to mark the title as dirty')
 		assert(titleAfterSave === 'README.txt', 'Expected saving to restore the clean file title')
 		assert(savedContent === 'Edited text content', 'Expected save to persist edited text back into the shared VFS')
@@ -46,18 +44,16 @@ export class TextEditorViewTest {
 	static async savesNewDocumentViaSaveAs(subjectFactory: SubjectFactory<TextEditorView>, scenario: ScenarioParameter): Promise<{ createdFileName: string | null, createdContent: string | null, emittedNodeId: string | null }> {
 		const assert: AssertFn = scenario.assert
 		const waitFor: WaitForFn = scenario.waitFor
-		const service = new VirtualFileSystemService(this.createMemoryStorage())
-		service.load()
-		const documentsFolder = service.resolvePath('/Documents')
+		const storage = this.createMemoryStorage()
+		const seedContext = PlatformTestContextFactory.createApplicationContext('text-editor', storage, null, null)
+		const documentsFolder = seedContext.virtualFileSystemService.resolvePath('/Documents')
 		assert(documentsFolder !== null && documentsFolder.kind === 'folder', 'Expected the Documents folder to exist before Save As testing')
 		let emittedNodeId: string | null = null
 		const editor = await subjectFactory()
-		editor.virtualFileSystemService = service
-		editor.snapshot = service.getSnapshot()
-		editor.defaultFolderId = documentsFolder.id
-		editor.onFileNodeChange = (nodeId: string | null): void => {
+		const context = PlatformTestContextFactory.createApplicationContext('text-editor', storage, null, documentsFolder.id, undefined, (nodeId: string | null) => {
 			emittedNodeId = nodeId
-		}
+		})
+		editor.platformContext = context.context
 		await waitFor(() => editor.shadowRoot !== null, 'Expected Text Editor shadow DOM to render')
 		await editor.updateComplete
 		const textarea = this.find(editor, '[data-testid="text-editor-textarea"]')
@@ -73,9 +69,9 @@ export class TextEditorViewTest {
 		fileNameInput.dispatchEvent(new Event('input', { bubbles: true }))
 		this.click(editor, '[data-testid="text-editor-save-as-confirm"]')
 		await editor.updateComplete
-		const createdFile = service.resolvePath('/Documents/Journal.txt')
+		const createdFile = context.virtualFileSystemService.resolvePath('/Documents/Journal.txt')
 		const createdFileName = createdFile?.name ?? null
-		const createdContent = createdFile === null ? null : service.readTextFile(createdFile.id)
+		const createdContent = createdFile === null ? null : context.virtualFileSystemService.readTextFile(createdFile.id)
 		assert(createdFileName === 'Journal.txt', 'Expected Save As to create Journal.txt in the Documents folder')
 		assert(createdContent === 'Fresh journal entry', 'Expected Save As to persist the current editor draft')
 		assert(emittedNodeId === createdFile?.id, 'Expected Save As to notify the shell about the new active file id')

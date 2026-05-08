@@ -4,8 +4,8 @@ import { Spec } from '@shared/lll.lll'
 import { FileManagerFormatting } from './FileManagerFormatting.lll'
 import { FileManagerSnapshot } from './FileManagerSnapshot.lll'
 import { FileManagerViewStyles } from './FileManagerViewStyles.lll'
+import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
 @Spec('Renders the Sprint 2 file manager browsing experience on top of the shared virtual filesystem service.')
 @customElement('iva-file-manager-view')
@@ -13,13 +13,7 @@ export class FileManagerView extends LitElement {
 	static styles = FileManagerViewStyles.styles
 
 	@property({ attribute: false })
-	virtualFileSystemService: VirtualFileSystemService | null = null
-
-	@property({ attribute: false })
-	requestedFolderId: string | null = null
-
-	@property({ attribute: false })
-	onOpenNode: ((nodeId: string, currentFolderId: string) => void) | null = null
+	platformContext: PlatformContract['ApplicationContext'] | null = null
 
 	@state()
 	private snapshot: VirtualFileSystemContract['Snapshot'] | null = null
@@ -55,6 +49,7 @@ export class FileManagerView extends LitElement {
 	private errorMessage: string | null = null
 
 	private unsubscribe: (() => void) | null = null
+	private attachedFileSystem: PlatformContract['FileSystemService'] | null = null
 
 	@Spec('Attaches to the shared virtual filesystem service after the view connects to the DOM.')
 	connectedCallback(): void {
@@ -73,10 +68,8 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Reattaches to the shared virtual filesystem service when the injected service property changes.')
 	updated(changedProperties: PropertyValues<this>): void {
-		if (changedProperties.has('virtualFileSystemService')) {
+		if (changedProperties.has('platformContext')) {
 			this.attachToService()
-		}
-		if (changedProperties.has('requestedFolderId')) {
 			this.applyRequestedFolderId()
 		}
 	}
@@ -235,7 +228,7 @@ export class FileManagerView extends LitElement {
 	@Spec('Renders either a thumbnail or a fallback icon preview for one file-system node.')
 	private renderNodePreview(node: VirtualFileSystemContract['Node'], mode: 'grid' | 'list'): TemplateResult {
 		const binarySource = node.kind === 'file' && typeof node.mimeType === 'string' && node.mimeType.startsWith('image/')
-			? node.thumbnailDataUrl ?? this.virtualFileSystemService?.readBinaryFile(node.id) ?? null
+			? node.thumbnailDataUrl ?? this.platformContext?.filesystem.readBinaryFile(node.id) ?? null
 			: null
 		if (binarySource !== null) {
 			if (mode === 'list') {
@@ -300,17 +293,23 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Attaches the component to the latest shared filesystem service and refreshes the rendered snapshot.')
 	private attachToService(): void {
+		const filesystemService = this.platformContext?.filesystem ?? null
+		if (this.attachedFileSystem === filesystemService) {
+			this.snapshot = filesystemService?.getSnapshot() ?? null
+			return
+		}
 		if (this.unsubscribe !== null) {
 			this.unsubscribe()
 			this.unsubscribe = null
 		}
-		if (this.virtualFileSystemService === null) {
+		this.attachedFileSystem = filesystemService
+		if (filesystemService === null) {
 			this.snapshot = null
 			return
 		}
-		this.snapshot = this.virtualFileSystemService.getSnapshot()
+		this.snapshot = filesystemService.getSnapshot()
 		this.synchronizeSelectionState()
-		this.unsubscribe = this.virtualFileSystemService.subscribe(snapshot => {
+		this.unsubscribe = filesystemService.subscribe(snapshot => {
 			this.snapshot = snapshot
 			this.synchronizeSelectionState()
 		})
@@ -346,10 +345,11 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Applies the latest shell-requested folder target when it points at a valid folder node.')
 	private applyRequestedFolderId(): void {
-		if (this.snapshot === null || this.requestedFolderId === null) {
+		const requestedFolderId = this.platformContext?.window.openedNodeId ?? null
+		if (this.snapshot === null || requestedFolderId === null) {
 			return
 		}
-		const requestedFolder = this.snapshot.schema.nodesById[this.requestedFolderId] ?? null
+		const requestedFolder = this.snapshot.schema.nodesById[requestedFolderId] ?? null
 		if (requestedFolder?.kind !== 'folder' || this.currentFolderId === requestedFolder.id) {
 			return
 		}
@@ -391,8 +391,8 @@ export class FileManagerView extends LitElement {
 			return
 		}
 		this.selectNode(node.id)
-		if (this.onOpenNode !== null) {
-			this.onOpenNode(node.id, this.getCurrentFolderNode()?.id ?? this.snapshot.schema.rootId)
+		if (this.platformContext !== null) {
+			this.platformContext.launcher.openNode(node.id, this.getCurrentFolderNode()?.id ?? this.snapshot.schema.rootId)
 			return
 		}
 		if (node.kind === 'folder') {
@@ -465,11 +465,11 @@ export class FileManagerView extends LitElement {
 	@Spec('Creates a new folder inside the current location and immediately selects it.')
 	private createFolder(): void {
 		const currentFolderNode = this.getCurrentFolderNode()
-		if (currentFolderNode === null || this.virtualFileSystemService === null) {
+		if (currentFolderNode === null || this.platformContext === null) {
 			return
 		}
 		try {
-			const folder = this.virtualFileSystemService.createFolder(currentFolderNode.id, 'New Folder')
+			const folder = this.platformContext.filesystem.createFolder(currentFolderNode.id, 'New Folder')
 			this.selectedNodeId = folder.id
 			this.focusedNodeId = folder.id
 			this.errorMessage = null
@@ -481,11 +481,11 @@ export class FileManagerView extends LitElement {
 	@Spec('Creates a new text file inside the current location and immediately selects it.')
 	private createTextFile(): void {
 		const currentFolderNode = this.getCurrentFolderNode()
-		if (currentFolderNode === null || this.virtualFileSystemService === null) {
+		if (currentFolderNode === null || this.platformContext === null) {
 			return
 		}
 		try {
-			const file = this.virtualFileSystemService.createTextFile(currentFolderNode.id, 'Untitled.txt', '')
+			const file = this.platformContext.filesystem.createTextFile(currentFolderNode.id, 'Untitled.txt', '')
 			this.selectedNodeId = file.id
 			this.focusedNodeId = file.id
 			this.errorMessage = null
@@ -522,11 +522,11 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Commits the rename dialog value to the shared filesystem and keeps the renamed item selected.')
 	private confirmRename(): void {
-		if (this.virtualFileSystemService === null || this.renameNodeId === null) {
+		if (this.platformContext === null || this.renameNodeId === null) {
 			return
 		}
 		try {
-			const renamedNode = this.virtualFileSystemService.renameNode(this.renameNodeId, this.renameValue)
+			const renamedNode = this.platformContext.filesystem.renameNode(this.renameNodeId, this.renameValue)
 			this.selectedNodeId = renamedNode.id
 			this.focusedNodeId = renamedNode.id
 			this.renameNodeId = null
@@ -569,11 +569,11 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Moves the selected item into the chosen destination folder and relies on the shared VFS subscription to refresh the view.')
 	private confirmMove(): void {
-		if (this.virtualFileSystemService === null || this.moveNodeId === null || this.moveDestinationFolderId === '') {
+		if (this.platformContext === null || this.moveNodeId === null || this.moveDestinationFolderId === '') {
 			return
 		}
 		try {
-			this.virtualFileSystemService.moveNode(this.moveNodeId, this.moveDestinationFolderId)
+			this.platformContext.filesystem.moveNode(this.moveNodeId, this.moveDestinationFolderId)
 			this.selectedNodeId = null
 			this.focusedNodeId = null
 			this.moveNodeId = null
@@ -602,11 +602,11 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Deletes the selected file or folder recursively when needed and clears the selection.')
 	private confirmDelete(): void {
-		if (this.virtualFileSystemService === null || this.deleteNodeId === null) {
+		if (this.platformContext === null || this.deleteNodeId === null) {
 			return
 		}
 		try {
-			this.virtualFileSystemService.deleteNode(this.deleteNodeId)
+			this.platformContext.filesystem.deleteNode(this.deleteNodeId)
 			this.selectedNodeId = null
 			this.focusedNodeId = null
 			this.deleteNodeId = null
@@ -625,7 +625,7 @@ export class FileManagerView extends LitElement {
 	@Spec('Imports supported host text and image files into the current folder of the shared virtual filesystem.')
 	private async onUploadChange(event: Event): Promise<void> {
 		const currentFolderNode = this.getCurrentFolderNode()
-		if (currentFolderNode === null || this.virtualFileSystemService === null) {
+		if (currentFolderNode === null || this.platformContext === null) {
 			return
 		}
 		const input = event.target
@@ -640,13 +640,13 @@ export class FileManagerView extends LitElement {
 			const isImageFile = uploadedFile.type.startsWith('image/') || extension === 'png' || extension === 'jpg' || extension === 'jpeg' || extension === 'webp' || extension === 'gif'
 			if (isTextFile) {
 				const content = await uploadedFile.text()
-				this.virtualFileSystemService.createTextFile(currentFolderNode.id, uploadedFile.name, content)
+				this.platformContext.filesystem.createTextFile(currentFolderNode.id, uploadedFile.name, content)
 				continue
 			}
 			if (isImageFile) {
 				const dataUrl = await this.readFileAsDataUrl(uploadedFile)
 				const mimeType = uploadedFile.type === '' ? FileManagerFormatting.inferImageMimeType(uploadedFile.name) : uploadedFile.type
-				this.virtualFileSystemService.createBinaryFile(currentFolderNode.id, uploadedFile.name, mimeType, dataUrl, dataUrl)
+				this.platformContext.filesystem.createBinaryFile(currentFolderNode.id, uploadedFile.name, mimeType, dataUrl, dataUrl)
 				continue
 			}
 			unsupportedCount += 1

@@ -1,9 +1,7 @@
 import { html, type TemplateResult } from 'lit'
 import { Spec } from '@shared/lll.lll'
-import { AppShellView } from '../AppShellView.lll'
-import { ShellWallpaperCatalog } from './ShellWallpaperCatalog.lll'
+import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
-import type { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
 @Spec('Encapsulates shell window title and window-body rendering logic for the App host.')
 export class AppWindowPresentation {
@@ -32,7 +30,7 @@ export class AppWindowPresentation {
 		return appDefinition.name
 	}
 
-	@Spec('Renders one app window body based on the current shell window state and shared VFS snapshot.')
+	@Spec('Renders one app window body based on the current shell window state and platform application context.')
 	static renderWindowContent(
 		windowEntry: {
 			id: number
@@ -40,61 +38,26 @@ export class AppWindowPresentation {
 			openedNodeId: string | null
 			sourceFolderId: string | null
 		},
-		activeTheme: string,
-		activeWallpaper: string,
-		vfsSnapshot: VirtualFileSystemContract['Snapshot'],
-		virtualFileSystemService: VirtualFileSystemService,
-		onThemeChange: (event: Event) => void,
-		onWallpaperChange: (event: Event) => void,
-		onOpenNode: (nodeId: string, currentFolderId: string) => void,
-		onTitleChange: (windowId: number, title: string) => void,
-		onFileNodeChange: (windowId: number, nodeId: string | null) => void
+		platformContext: PlatformContract['ApplicationContext']
 	): TemplateResult {
 		if (windowEntry.appId === 'settings') {
-			return AppShellView.renderSettingsContent(
-				activeTheme,
-				activeWallpaper,
-				ShellWallpaperCatalog.getChoices(vfsSnapshot),
-				onThemeChange,
-				onWallpaperChange
-			)
+			return html`<iva-settings-view .platformContext=${platformContext}></iva-settings-view>`
 		}
 		if (windowEntry.appId === 'file-manager') {
-			return html`
-				<iva-file-manager-view
-					.virtualFileSystemService=${virtualFileSystemService}
-					.requestedFolderId=${windowEntry.openedNodeId}
-					.onOpenNode=${onOpenNode}
-				></iva-file-manager-view>
-			`
+			return html`<iva-file-manager-view .platformContext=${platformContext}></iva-file-manager-view>`
 		}
 		if (windowEntry.appId === 'text-editor') {
-			return html`
-				<iva-text-editor-view
-					.virtualFileSystemService=${virtualFileSystemService}
-					.snapshot=${vfsSnapshot}
-					.fileNodeId=${windowEntry.openedNodeId}
-					.defaultFolderId=${windowEntry.sourceFolderId}
-					.onTitleChange=${(title: string) => onTitleChange(windowEntry.id, title)}
-					.onFileNodeChange=${(nodeId: string | null) => onFileNodeChange(windowEntry.id, nodeId)}
-				></iva-text-editor-view>
-			`
+			return html`<iva-text-editor-view .platformContext=${platformContext}></iva-text-editor-view>`
 		}
 		if (windowEntry.appId === 'image-viewer') {
-			return html`
-				<iva-image-viewer-view
-					.virtualFileSystemService=${virtualFileSystemService}
-					.snapshot=${vfsSnapshot}
-					.fileNodeId=${windowEntry.openedNodeId}
-					.onTitleChange=${(title: string) => onTitleChange(windowEntry.id, title)}
-				></iva-image-viewer-view>
-			`
+			return html`<iva-image-viewer-view .platformContext=${platformContext}></iva-image-viewer-view>`
 		}
 		return html`
 			<div class="settings-grid">
 				<section class="settings-panel">
 					<strong>Build surface</strong>
-					<p>App Studio will grow into platform tooling in chunk 3.</p>
+					<p>App Studio now targets the platform application context.</p>
+					<p>Future tooling can use the same stable contracts for files, settings, and app launching.</p>
 				</section>
 			</div>
 		`

@@ -1,9 +1,9 @@
 import { LitElement, css, html, type PropertyValues, type TemplateResult } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
-import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 import { FileManagerSnapshot } from '../fileManager/FileManagerSnapshot.lll'
+import type { PlatformContract } from '../platform/PlatformContract.lll'
+import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
 
 @Spec('Renders the VFS-backed Text Editor with open, edit, save, and Save As flows.')
 @customElement('iva-text-editor-view')
@@ -156,22 +156,7 @@ export class TextEditorView extends LitElement {
 	`
 
 	@property({ attribute: false })
-	virtualFileSystemService: VirtualFileSystemService | null = null
-
-	@property({ attribute: false })
-	snapshot: VirtualFileSystemContract['Snapshot'] | null = null
-
-	@property({ attribute: false })
-	fileNodeId: string | null = null
-
-	@property({ attribute: false })
-	defaultFolderId: string | null = null
-
-	@property({ attribute: false })
-	onTitleChange: ((title: string) => void) | null = null
-
-	@property({ attribute: false })
-	onFileNodeChange: ((nodeId: string | null) => void) | null = null
+	platformContext: PlatformContract['ApplicationContext'] | null = null
 
 	@state()
 	private editorValue: string = ''
@@ -199,7 +184,7 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Synchronizes the visible editor state whenever the shell updates the active snapshot or selected file.')
 	updated(changedProperties: PropertyValues<this>): void {
-		if (changedProperties.has('snapshot') || changedProperties.has('fileNodeId')) {
+		if (changedProperties.has('platformContext')) {
 			this.synchronizeEditorState()
 		}
 	}
@@ -233,26 +218,28 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Loads the selected text file from the VFS and preserves unsaved recovery text when the backing file disappears.')
 	private synchronizeEditorState(): void {
-		if (this.snapshot === null || this.virtualFileSystemService === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const fileNodeId = this.platformContext?.window.openedNodeId ?? null
+		if (snapshot === null || this.platformContext === null) {
 			return
 		}
-		if (this.fileNodeId === null) {
+		if (fileNodeId === null) {
 			this.errorMessage = null
 			this.emitTitleChange()
 			return
 		}
-		const fileNode = this.snapshot.schema.nodesById[this.fileNodeId] ?? null
+		const fileNode = snapshot.schema.nodesById[fileNodeId] ?? null
 		if (fileNode !== null && this.isTextFile(fileNode)) {
 			this.lastKnownFileName = fileNode.name
-			if (this.loadedFileId !== this.fileNodeId || this.isDirty === false) {
-				this.editorValue = this.virtualFileSystemService.readTextFile(fileNode.id) ?? this.editorValue
+			if (this.loadedFileId !== fileNodeId || this.isDirty === false) {
+				this.editorValue = this.platformContext.filesystem.readTextFile(fileNode.id) ?? this.editorValue
 			}
 			this.loadedFileId = fileNode.id
 			this.errorMessage = null
 			this.emitTitleChange()
 			return
 		}
-		this.loadedFileId = this.fileNodeId
+		this.loadedFileId = fileNodeId
 		this.errorMessage = fileNode === null
 			? 'This file was deleted or is no longer available. You can use Save As to recover your current text.'
 			: 'This file cannot be opened as text. Please choose a text document instead.'
@@ -275,16 +262,18 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Saves the active document back into the selected VFS file or opens Save As when no writable target exists.')
 	private saveCurrentDocument(): void {
-		if (this.virtualFileSystemService === null || this.fileNodeId === null || this.snapshot === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const fileNodeId = this.platformContext?.window.openedNodeId ?? null
+		if (this.platformContext === null || fileNodeId === null || snapshot === null) {
 			this.openSaveAsDialog()
 			return
 		}
-		const fileNode = this.snapshot.schema.nodesById[this.fileNodeId] ?? null
+		const fileNode = snapshot.schema.nodesById[fileNodeId] ?? null
 		if (fileNode === null || this.isTextFile(fileNode) === false) {
 			this.openSaveAsDialog()
 			return
 		}
-		this.virtualFileSystemService.writeTextFile(fileNode.id, this.editorValue)
+		this.platformContext.filesystem.writeTextFile(fileNode.id, this.editorValue)
 		this.isDirty = false
 		this.lastKnownFileName = fileNode.name
 		this.errorMessage = null
@@ -348,27 +337,27 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Creates a new VFS text file from the current draft and notifies the shell about the new active file target.')
 	private confirmSaveAs(): void {
-		if (this.virtualFileSystemService === null || this.saveAsFolderId === '') {
+		if (this.platformContext === null || this.saveAsFolderId === '') {
 			return
 		}
-		const createdFile = this.virtualFileSystemService.createTextFile(this.saveAsFolderId, this.saveAsName, this.editorValue)
+		const createdFile = this.platformContext.filesystem.createTextFile(this.saveAsFolderId, this.saveAsName, this.editorValue)
 		this.loadedFileId = createdFile.id
 		this.lastKnownFileName = createdFile.name
 		this.isDirty = false
 		this.errorMessage = null
 		this.isSaveAsOpen = false
-		if (this.onFileNodeChange !== null) {
-			this.onFileNodeChange(createdFile.id)
-		}
+		this.platformContext.window.setOpenedNodeId(createdFile.id)
 		this.emitTitleChange()
 	}
 
 	@Spec('Returns the current VFS file node when the selected id still points to a text file.')
 	private getActiveFileNode(): VirtualFileSystemContract['Node'] | null {
-		if (this.snapshot === null || this.fileNodeId === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const fileNodeId = this.platformContext?.window.openedNodeId ?? null
+		if (snapshot === null || fileNodeId === null) {
 			return null
 		}
-		const fileNode = this.snapshot.schema.nodesById[this.fileNodeId] ?? null
+		const fileNode = snapshot.schema.nodesById[fileNodeId] ?? null
 		if (fileNode === null || this.isTextFile(fileNode) === false) {
 			return null
 		}
@@ -388,42 +377,46 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Returns the default Save As destination folder, preferring the current File Manager folder and otherwise Documents.')
 	private resolveDefaultFolderId(): string {
-		if (this.snapshot === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const defaultFolderId = this.platformContext?.window.sourceFolderId ?? null
+		if (snapshot === null) {
 			return ''
 		}
-		const requestedFolder = this.defaultFolderId === null ? null : this.snapshot.schema.nodesById[this.defaultFolderId] ?? null
+		const requestedFolder = defaultFolderId === null ? null : snapshot.schema.nodesById[defaultFolderId] ?? null
 		if (requestedFolder?.kind === 'folder') {
 			return requestedFolder.id
 		}
-		const documentsFolder = FileManagerSnapshot.resolvePath(this.snapshot, '/Documents')
+		const documentsFolder = FileManagerSnapshot.resolvePath(snapshot, '/Documents')
 		if (documentsFolder?.kind === 'folder') {
 			return documentsFolder.id
 		}
-		return this.snapshot.schema.rootId
+		return snapshot.schema.rootId
 	}
 
 	@Spec('Builds the visible Save As folder list from the current snapshot tree.')
 	private getFolderChoices(): Array<{ id: string, path: string }> {
-		if (this.snapshot === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		if (snapshot === null) {
 			return []
 		}
 		const folderChoices: Array<{ id: string, path: string }> = []
-		this.collectFolderChoices(this.snapshot.schema.rootId, folderChoices)
+		this.collectFolderChoices(snapshot.schema.rootId, folderChoices)
 		return folderChoices
 	}
 
 	@Spec('Walks the snapshot folder tree in display order to collect Save As destinations.')
 	private collectFolderChoices(folderId: string, folderChoices: Array<{ id: string, path: string }>): void {
-		if (this.snapshot === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		if (snapshot === null) {
 			return
 		}
-		const folderNode = this.snapshot.schema.nodesById[folderId]
+		const folderNode = snapshot.schema.nodesById[folderId]
 		if (folderNode === undefined || folderNode.kind !== 'folder') {
 			return
 		}
-		folderChoices.push({ id: folderNode.id, path: FileManagerSnapshot.describeNodePath(this.snapshot, folderNode.id) })
-		for (const childId of this.snapshot.schema.childrenById[folderNode.id] ?? []) {
-			const childNode = this.snapshot.schema.nodesById[childId]
+		folderChoices.push({ id: folderNode.id, path: FileManagerSnapshot.describeNodePath(snapshot, folderNode.id) })
+		for (const childId of snapshot.schema.childrenById[folderNode.id] ?? []) {
+			const childNode = snapshot.schema.nodesById[childId]
 			if (childNode?.kind === 'folder') {
 				this.collectFolderChoices(childNode.id, folderChoices)
 			}
@@ -432,12 +425,12 @@ export class TextEditorView extends LitElement {
 
 	@Spec('Publishes the current title label so the outer shell window header reflects file name and dirty state changes.')
 	private emitTitleChange(): void {
-		if (this.onTitleChange === null) {
+		if (this.platformContext === null) {
 			return
 		}
 		const baseTitle = this.errorMessage !== null
 			? `${this.lastKnownFileName ?? 'Text Editor'} (missing)`
 			: this.lastKnownFileName ?? 'Text Editor'
-		this.onTitleChange(this.isDirty === true ? `${baseTitle} *` : baseTitle)
+		this.platformContext.window.setTitle(this.isDirty === true ? `${baseTitle} *` : baseTitle)
 	}
 }

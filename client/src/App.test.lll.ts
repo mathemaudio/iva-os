@@ -156,8 +156,9 @@ export class AppTest {
 		this.click(app, '[data-testid="dock-app-settings"]')
 		await waitFor(() => this.find(app, '[data-testid="window-settings"]') !== null, 'Expected settings window to open from the dock')
 
-		const themeSelect = this.find(app, '[data-testid="theme-select"]')
-		const wallpaperSelect = this.find(app, '[data-testid="wallpaper-select"]')
+		const settingsWindow = this.find(app, 'iva-settings-view')
+		const themeSelect = settingsWindow?.shadowRoot?.querySelector('[data-testid="theme-select"]') ?? null
+		const wallpaperSelect = settingsWindow?.shadowRoot?.querySelector('[data-testid="wallpaper-select"]') ?? null
 		assert(themeSelect instanceof HTMLSelectElement, 'Expected the theme select to render')
 		assert(wallpaperSelect instanceof HTMLSelectElement, 'Expected the wallpaper select to render')
 
@@ -199,6 +200,28 @@ export class AppTest {
 		assert(title === 'Text Editor', 'Expected Text Editor to use its default shell title before a file is opened')
 		assert(dockRunning === 'true', 'Expected the dock to mark Text Editor as running after launch')
 		return { hasWindow, title, dockRunning }
+	}
+
+	@Scenario('keeps file manager navigation stable while another app opens from the selected folder')
+	static async preservesFileManagerNavigationAcrossOtherWindowUpdates(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ currentFolderBeforeOpen: string, currentFolderAfterOpen: string, documentsStillVisible: boolean }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+		await this.waitForFileManager(app, waitFor)
+		this.clickInFileManager(app, '[data-testid="file-manager-sidebar-Documents"]')
+		await waitFor(() => this.readTextInFileManager(app, '[data-testid="file-manager-current-folder"]') === 'Documents', 'Expected Documents to become the current folder before opening a file')
+		const currentFolderBeforeOpen = this.readTextInFileManager(app, '[data-testid="file-manager-current-folder"]')
+		this.doubleClickByNodeName(app, 'README.txt')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected Text Editor to open from the selected Documents file')
+		await this.waitForFileManager(app, waitFor)
+		const currentFolderAfterOpen = this.readTextInFileManager(app, '[data-testid="file-manager-current-folder"]')
+		const documentsStillVisible = this.findNodeByName(app, 'README.txt') !== null
+		assert(currentFolderBeforeOpen === 'Documents', 'Expected File Manager to navigate into Documents before opening the file')
+		assert(currentFolderAfterOpen === 'Documents', 'Expected File Manager to stay in Documents after Text Editor opens')
+		assert(documentsStillVisible, 'Expected File Manager to keep rendering the Documents folder contents after another window opens')
+		return { currentFolderBeforeOpen, currentFolderAfterOpen, documentsStillVisible }
 	}
 
 	@Scenario('opens and closes the Image Viewer from the launcher without breaking the shell')

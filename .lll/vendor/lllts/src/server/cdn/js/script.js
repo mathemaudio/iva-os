@@ -378,7 +378,9 @@
     }
     static setFixedRunProgress(progress) {
       const globalScope = this.getGlobalScope();
-      globalScope[this.fixedRunProgressJsonKey] = progress && typeof progress === "object" ? progress : void 0;
+      const progressPayload = progress && typeof progress === "object" ? progress : void 0;
+      globalScope[this.fixedRunProgressJsonKey] = progressPayload;
+      this.notifyRunProgressBinding(globalScope, progressPayload);
     }
     static buildTerminalReport(testReports, allPassed) {
       const lines = [];
@@ -451,12 +453,21 @@
     static getGlobalScope() {
       return globalThis;
     }
+    static notifyRunProgressBinding(globalScope, progressPayload) {
+      const progressBinding = globalScope[this.fixedRunProgressBindingKey];
+      if (typeof progressBinding !== "function") {
+        return;
+      }
+      Promise.resolve(progressBinding(progressPayload)).catch(() => {
+      });
+    }
   };
   __publicField(OverlayReportRuntime, "testStatusEmojiPassed", "\u{1F7E2}");
   __publicField(OverlayReportRuntime, "testStatusEmojiFailed", "\u26D4\uFE0F");
   __publicField(OverlayReportRuntime, "fixedLastRunReportKey", "FIXED_llltsLastRunReport");
   __publicField(OverlayReportRuntime, "fixedLastRunReportJsonKey", "FIXED_llltsLastRunReportJson");
   __publicField(OverlayReportRuntime, "fixedRunProgressJsonKey", "FIXED_llltsRunProgressJson");
+  __publicField(OverlayReportRuntime, "fixedRunProgressBindingKey", "FIXED_llltsReportProgress");
 
   // src/server/overlay-runtime/OverlayScenarioRuntime.lll.ts
   var _OverlayScenarioRuntime = class _OverlayScenarioRuntime {

@@ -1,7 +1,7 @@
 import './FileManagerView.lll'
 import { AssertFn, Scenario, ScenarioParameter, Spec, SubjectFactory, WaitForFn } from '@shared/lll.lll'
 import { FileManagerView } from './FileManagerView.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
+import { PlatformTestContextFactory } from '../platform/PlatformTestContextFactory.lll'
 
 @Spec('Exercises the File Manager view through user-visible Sprint 2 interactions.')
 export class FileManagerViewTest {
@@ -109,11 +109,7 @@ export class FileManagerViewTest {
 	@Spec('Creates a File Manager host with an isolated shared VFS service and waits for first render.')
 	private static async createPreparedFileManager(subjectFactory: SubjectFactory<FileManagerView>, waitFor: WaitForFn): Promise<FileManagerView> {
 		const fileManager = await subjectFactory()
-		if (fileManager.virtualFileSystemService === null) {
-			const service = new VirtualFileSystemService(this.createMemoryStorage())
-			service.load()
-			fileManager.virtualFileSystemService = service
-		}
+		fileManager.platformContext = PlatformTestContextFactory.createApplicationContext('file-manager', this.createMemoryStorage(), null, null).context
 		await waitFor(() => fileManager.shadowRoot !== null, 'Expected File Manager shadow DOM to render')
 		await fileManager.updateComplete
 		return fileManager

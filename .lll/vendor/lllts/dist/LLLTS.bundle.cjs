@@ -5582,6 +5582,7 @@ var require_ClientTunnelRunner_lll = __commonJS({
     var __metadata2 = exports2 && exports2.__metadata || function(k, v) {
       if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
     };
+    var ClientTunnelRunner_1;
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ClientTunnelRunner = void 0;
     var childProcess = __importStar(require("child_process"));
@@ -5590,8 +5591,13 @@ var require_ClientTunnelRunner_lll = __commonJS({
     var util = __importStar(require("util"));
     var lll_lll_12 = require_lll_lll();
     var ClientTunnelRunner = class ClientTunnelRunner {
+      static {
+        ClientTunnelRunner_1 = this;
+      }
       loadPlaywright;
       installChromium;
+      static progressBindingName = "FIXED_llltsReportProgress";
+      static progressReadTimeoutMs = 250;
       constructor(loadPlaywright = () => require("playwright"), installChromium = async () => this.installChromiumWithPlaywrightCli()) {
         this.loadPlaywright = loadPlaywright;
         this.installChromium = installChromium;
@@ -5604,6 +5610,7 @@ var require_ClientTunnelRunner_lll = __commonJS({
         let context = null;
         let page = null;
         let timeoutPhase = "navigation";
+        let lastProgressContext = void 0;
         try {
           const playwright = this.loadPlaywright();
           if (!playwright.chromium || typeof playwright.chromium.launch !== "function") {
@@ -5620,6 +5627,9 @@ var require_ClientTunnelRunner_lll = __commonJS({
           const contextInstance = await browserInstance.newContext();
           context = contextInstance;
           page = await contextInstance.newPage();
+          await this.exposeProgressBinding(page, (progressContext) => {
+            lastProgressContext = progressContext;
+          });
           const automaticUrl = this.buildAutomaticTunnelUrl(input.url, this.resolvePerStepTimeoutMs(input.timeoutMs));
           this.attachConsoleErrorListeners(page, consoleErrors, () => currentPhase);
           await page.goto(automaticUrl, { waitUntil: "domcontentloaded" });
@@ -5653,33 +5663,62 @@ var require_ClientTunnelRunner_lll = __commonJS({
             reportJson
           };
         } catch (error) {
-          const timeoutContext = this.isTimeoutError(error) ? await this.readTimeoutContext(page, timeoutPhase) : void 0;
+          const timeoutContext = this.isTimeoutError(error) ? await this.readTimeoutContext(page, timeoutPhase, lastProgressContext) : void 0;
           return this.mapRuntimeError(error, timeoutContext);
         } finally {
           await this.safeClose(context);
           await this.safeClose(browser);
         }
       }
-      async readTimeoutContext(page, timeoutPhase) {
-        const context = { phase: timeoutPhase };
+      async exposeProgressBinding(page, onProgress) {
+        await page.exposeBinding(ClientTunnelRunner_1.progressBindingName, (_source, rawProgress) => {
+          onProgress(this.normalizeTimeoutContext(rawProgress, "scenario"));
+        });
+      }
+      async readTimeoutContext(page, timeoutPhase, lastProgressContext) {
+        const fallbackContext = timeoutPhase === "scenario" && lastProgressContext?.phase === "scenario" ? lastProgressContext : { phase: timeoutPhase };
         if (page === null || timeoutPhase !== "scenario") {
-          return context;
+          return fallbackContext;
+        }
+        if (lastProgressContext?.phase === "scenario" && this.hasTimeoutTarget(lastProgressContext)) {
+          return lastProgressContext;
         }
         try {
-          const raw = await page.evaluate(() => globalThis.FIXED_llltsRunProgressJson);
-          if (!raw || typeof raw !== "object") {
-            return context;
-          }
-          const record = raw;
-          return {
-            phase: timeoutPhase,
-            testPath: typeof record.testPath === "string" && record.testPath.length > 0 ? record.testPath : void 0,
-            scenarioName: typeof record.scenarioName === "string" && record.scenarioName.length > 0 ? record.scenarioName : void 0,
-            scenarioMethodName: typeof record.scenarioMethodName === "string" && record.scenarioMethodName.length > 0 ? record.scenarioMethodName : void 0
-          };
+          const raw = await this.withTimeout(page.evaluate(() => globalThis.FIXED_llltsRunProgressJson), ClientTunnelRunner_1.progressReadTimeoutMs, "Timed out while reading browser progress.");
+          return this.normalizeTimeoutContext(raw, timeoutPhase);
         } catch {
+          return fallbackContext;
+        }
+      }
+      normalizeTimeoutContext(raw, timeoutPhase) {
+        const context = { phase: timeoutPhase };
+        if (!raw || typeof raw !== "object") {
           return context;
         }
+        const record = raw;
+        const testPath = this.nonEmptyString(record.testPath);
+        const scenarioName = this.nonEmptyString(record.scenarioName);
+        const scenarioMethodName = this.nonEmptyString(record.scenarioMethodName);
+        if (testPath !== void 0) {
+          context.testPath = testPath;
+        }
+        if (scenarioName !== void 0) {
+          context.scenarioName = scenarioName;
+        }
+        if (scenarioMethodName !== void 0) {
+          context.scenarioMethodName = scenarioMethodName;
+        }
+        return context;
+      }
+      hasTimeoutTarget(context) {
+        return typeof context.testPath === "string" && context.testPath.length > 0 || typeof context.scenarioName === "string" && context.scenarioName.length > 0 || typeof context.scenarioMethodName === "string" && context.scenarioMethodName.length > 0;
+      }
+      nonEmptyString(value) {
+        if (typeof value !== "string") {
+          return void 0;
+        }
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : void 0;
       }
       attachConsoleErrorListeners(page, consoleErrors, getPhase) {
         page.on("pageerror", (error) => {
@@ -5934,6 +5973,23 @@ showing 3 of ${lines.length} total`;
         } catch {
         }
       }
+      async withTimeout(promise, timeoutMs, timeoutMessage) {
+        let timeoutHandle = null;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise((_resolve, reject) => {
+              timeoutHandle = setTimeout(() => {
+                reject(new Error(timeoutMessage));
+              }, timeoutMs);
+            })
+          ]);
+        } finally {
+          if (timeoutHandle !== null) {
+            clearTimeout(timeoutHandle);
+          }
+        }
+      }
     };
     exports2.ClientTunnelRunner = ClientTunnelRunner;
     __decorate2([
@@ -5943,11 +5999,35 @@ showing 3 of ${lines.length} total`;
       __metadata2("design:returntype", Promise)
     ], ClientTunnelRunner.prototype, "run", null);
     __decorate2([
+      (0, lll_lll_12.Spec)("Receives browser-side test progress from the overlay before a stuck page can block evaluate calls."),
+      __metadata2("design:type", Function),
+      __metadata2("design:paramtypes", [Object, Function]),
+      __metadata2("design:returntype", Promise)
+    ], ClientTunnelRunner.prototype, "exposeProgressBinding", null);
+    __decorate2([
       (0, lll_lll_12.Spec)("Reads overlay progress so timeout messages can identify the active test or scenario."),
       __metadata2("design:type", Function),
-      __metadata2("design:paramtypes", [Object, Object]),
+      __metadata2("design:paramtypes", [Object, Object, Object]),
       __metadata2("design:returntype", Promise)
     ], ClientTunnelRunner.prototype, "readTimeoutContext", null);
+    __decorate2([
+      (0, lll_lll_12.Spec)("Normalizes overlay progress into the timeout context shape used by compiler diagnostics."),
+      __metadata2("design:type", Function),
+      __metadata2("design:paramtypes", [Object, Object]),
+      __metadata2("design:returntype", Object)
+    ], ClientTunnelRunner.prototype, "normalizeTimeoutContext", null);
+    __decorate2([
+      (0, lll_lll_12.Spec)("Returns true when timeout context identifies at least one concrete execution target."),
+      __metadata2("design:type", Function),
+      __metadata2("design:paramtypes", [Object]),
+      __metadata2("design:returntype", Boolean)
+    ], ClientTunnelRunner.prototype, "hasTimeoutTarget", null);
+    __decorate2([
+      (0, lll_lll_12.Spec)("Returns trimmed strings for optional progress fields."),
+      __metadata2("design:type", Function),
+      __metadata2("design:paramtypes", [Object]),
+      __metadata2("design:returntype", Object)
+    ], ClientTunnelRunner.prototype, "nonEmptyString", null);
     __decorate2([
       (0, lll_lll_12.Spec)("Attaches browser listeners that capture runtime errors with phase metadata."),
       __metadata2("design:type", Function),
@@ -6092,7 +6172,13 @@ showing 3 of ${lines.length} total`;
       __metadata2("design:paramtypes", [Object]),
       __metadata2("design:returntype", Promise)
     ], ClientTunnelRunner.prototype, "safeClose", null);
-    exports2.ClientTunnelRunner = ClientTunnelRunner = __decorate2([
+    __decorate2([
+      (0, lll_lll_12.Spec)("Bounds an auxiliary promise so diagnostic collection cannot hang after the main timeout fires."),
+      __metadata2("design:type", Function),
+      __metadata2("design:paramtypes", [Promise, Number, String]),
+      __metadata2("design:returntype", Promise)
+    ], ClientTunnelRunner.prototype, "withTimeout", null);
+    exports2.ClientTunnelRunner = ClientTunnelRunner = ClientTunnelRunner_1 = __decorate2([
       (0, lll_lll_12.Spec)("Runs behavioral scenarios through the overlay UI using a Playwright browser tunnel."),
       __metadata2("design:paramtypes", [Function, Function])
     ], ClientTunnelRunner);
@@ -7236,7 +7322,10 @@ ${details}`;
     return segments.join(" ");
   }
   static formatClientTunnelTimeoutMessage(result) {
-    const details = ["Client tunnel timed out while waiting for FIXED_llltsLastRunReport."];
+    const details = [
+      "Testing took too long, so LLLTS stopped waiting for the browser run.",
+      "A scenario, render cycle, import, or app event handler may be stuck in an infinite loop."
+    ];
     const timeoutContext = result.timeoutContext;
     if (timeoutContext?.phase === "navigation") {
       details.push("Timeout happened before any scenario started, while navigating to the automatic tunnel page.");
@@ -7251,7 +7340,7 @@ ${details}`;
         targetParts.push(`scenario method ${timeoutContext.scenarioMethodName}`);
       }
       if (targetParts.length > 0) {
-        details.push(`Timeout happened while running ${targetParts.join(", ")}.`);
+        details.push(`Last active target: ${targetParts.join(", ")}.`);
       } else {
         details.push("Timeout happened after the tunnel entered scenario execution.");
       }

@@ -4,6 +4,7 @@ import { Spec } from '@shared/lll.lll'
 import './fileManager/FileManagerView.lll'
 import './apps/TextEditorView.lll'
 import './apps/ImageViewerView.lll'
+import './apps/SettingsView.lll'
 import { AppShellView } from './AppShellView.lll'
 import { AppAssociationRegistry } from './shell/AppAssociationRegistry.lll'
 import { ShellWallpaperCatalog } from './shell/ShellWallpaperCatalog.lll'
@@ -13,12 +14,20 @@ import { VirtualFileSystemService } from './vfs/VirtualFileSystemService.lll'
 import { AppPreferenceStore } from './shell/AppPreferenceStore.lll'
 import { AppWindowCatalog } from './shell/AppWindowCatalog.lll'
 import { AppWindowPresentation } from './shell/AppWindowPresentation.lll'
+import { PlatformFileSystemService } from './platform/PlatformFileSystemService.lll'
+import { PlatformSettingsService } from './platform/PlatformSettingsService.lll'
+import { PlatformAppLauncherService } from './platform/PlatformAppLauncherService.lll'
+import type { PlatformContract } from './platform/PlatformContract.lll'
+import { AppWindowContextRegistry } from './shell/AppWindowContextRegistry.lll';
+
 
 
 
 @Spec('Composes the browser-hosted operating shell with shared VFS-backed apps, launcher routing, and persisted appearance settings.')
 @customElement('app-root')
 export class App extends LitElement {
+	private readonly appWindowContextRegistry = new AppWindowContextRegistry(this);
+
 	private readonly appWindowCatalog = new AppWindowCatalog()
 	static styles = AppShellView.styles
 
@@ -72,6 +81,17 @@ export class App extends LitElement {
 	} | null = null
 
 	private readonly virtualFileSystemService = new VirtualFileSystemService()
+	public readonly platformFileSystemService = new PlatformFileSystemService(this.virtualFileSystemService)
+	public readonly platformSettingsService = new PlatformSettingsService(
+		() => this.getSettingsSnapshot(),
+		(theme: string) => this.applyTheme(theme),
+		(wallpaperId: string) => this.applyWallpaper(wallpaperId)
+	)
+	public readonly platformLauncherService = new PlatformAppLauncherService(
+		(nodeId: string, currentFolderId: string | null) => this.openNode(nodeId, currentFolderId),
+		(appId: string, openedNodeId: string | null, sourceFolderId: string | null) => this.openApp(appId, openedNodeId, sourceFolderId)
+	)
+	public readonly windowContextsByWindowId = new Map<number, PlatformContract['ApplicationContext']>()
 	private readonly onWindowDragListener = (event: MouseEvent): void => this.onWindowDrag(event)
 	private readonly onWindowResizeListener = (event: MouseEvent): void => this.onWindowResize(event)
 	private readonly endWindowPointerSessionListener = (): void => this.endWindowPointerSession()
@@ -162,6 +182,27 @@ export class App extends LitElement {
 		}
 		const firstWallpaperChoice = ShellWallpaperCatalog.getChoices(snapshot).find(choice => choice.id !== 'aurora' && choice.id !== 'dunes' && choice.id !== 'grid')
 		this.activeWallpaper = firstWallpaperChoice?.id ?? 'aurora'
+		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
+	}
+
+	@Spec('Returns the latest platform-facing settings snapshot for app consumption.')
+	private getSettingsSnapshot(): PlatformContract['SettingsSnapshot'] {
+		return {
+			theme: this.activeTheme,
+			wallpaper: this.activeWallpaper,
+			wallpaperChoices: ShellWallpaperCatalog.getChoices(this.vfsSnapshot)
+		}
+	}
+
+	@Spec('Applies one app-requested theme through the shell-managed settings boundary.')
+	private applyTheme(theme: string): void {
+		this.activeTheme = theme === 'light' ? 'light' : 'dark'
+		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
+	}
+
+	@Spec('Applies one app-requested wallpaper through the shell-managed settings boundary.')
+	private applyWallpaper(wallpaperId: string): void {
+		this.activeWallpaper = wallpaperId
 		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
 	}
 
@@ -258,6 +299,14 @@ export class App extends LitElement {
 
 	@Spec('Focuses a window and brings it to the front of the z-order.')
 	private focusWindow(windowId: number): void {
+		const currentFocusedWindowId = this.getFocusedWindowId()
+		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
+		if (targetWindow === null) {
+			return
+		}
+		if (currentFocusedWindowId === windowId && targetWindow.isMinimized === false) {
+			return
+		}
 		const zIndex = this.getNextZIndex()
 		this.windows = this.windows.map(windowEntry => {
 			if (windowEntry.id !== windowId) {
@@ -303,10 +352,18 @@ export class App extends LitElement {
 	@Spec('Closes a window and removes it from the shell state.')
 	private closeWindow(windowId: number): void {
 		this.windows = this.windows.filter(windowEntry => windowEntry.id !== windowId)
+		this.windowContextsByWindowId.delete(windowId)
 	}
 
 	@Spec('Restores a minimized window and focuses it.')
 	private restoreAndFocusWindow(windowId: number): void {
+		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
+		if (targetWindow === null) {
+			return
+		}
+		if (targetWindow.isMinimized === false && this.getFocusedWindowId() === windowId) {
+			return
+		}
 		const zIndex = this.getNextZIndex()
 		this.windows = this.windows.map(windowEntry => {
 			if (windowEntry.id !== windowId) {
@@ -429,25 +486,6 @@ export class App extends LitElement {
 		this.activeResizeSession = null
 	}
 
-	@Spec('Updates the selected wallpaper preference and persists it locally.')
-	private onWallpaperChange(event: Event): void {
-		const select = event.target
-		if (!(select instanceof HTMLSelectElement)) {
-			return
-		}
-		this.activeWallpaper = select.value
-		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
-	}
-
-	@Spec('Updates the selected theme preference and persists it locally without affecting the current wallpaper.')
-	private onThemeChange(event: Event): void {
-		const select = event.target
-		if (!(select instanceof HTMLSelectElement)) {
-			return
-		}
-		this.activeTheme = select.value === 'light' ? 'light' : 'dark'
-		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
-	}
 
 	@Spec('Returns true when the given app currently has an open window.')
 	private isAppRunning(appId: string): boolean {
@@ -501,40 +539,56 @@ export class App extends LitElement {
 	}
 
 	@Spec('Accepts child-view title updates so file rename, delete, and dirty-state changes appear in the outer shell window header.')
-	private onChildWindowTitleChange(windowId: number, title: string): void {
-		this.windows = this.windows.map(windowEntry => {
-			if (windowEntry.id !== windowId) {
+	public onChildWindowTitleChange(windowId: number, title: string): void {
+		let changedWindowCount = 0
+		const nextWindows = this.windows.map(windowEntry => {
+			if (windowEntry.id !== windowId || windowEntry.title === title) {
 				return windowEntry
 			}
+			changedWindowCount += 1
 			return {
 				...windowEntry,
 				title
 			}
 		})
+		if (changedWindowCount > 0) {
+			this.windows = nextWindows
+		}
 	}
 
 	@Spec('Accepts child-view active file changes so Save As targets become the new source of truth for that app window.')
-	private onChildWindowNodeChange(windowId: number, nodeId: string | null): void {
-		this.windows = this.windows.map(windowEntry => {
+	public onChildWindowNodeChange(windowId: number, nodeId: string | null): void {
+		let changedWindowCount = 0
+		const nextWindows = this.windows.map(windowEntry => {
 			if (windowEntry.id !== windowId) {
 				return windowEntry
 			}
 			const node = nodeId === null ? null : this.vfsSnapshot.schema.nodesById[nodeId] ?? null
+			const nextSourceFolderId = node?.parentId ?? windowEntry.sourceFolderId
+			const nextTitle = node?.kind === 'file' ? node.name : windowEntry.title
+			if (
+				windowEntry.openedNodeId === nodeId
+				&& windowEntry.sourceFolderId === nextSourceFolderId
+				&& windowEntry.title === nextTitle
+			) {
+				return windowEntry
+			}
+			changedWindowCount += 1
 			return {
 				...windowEntry,
 				openedNodeId: nodeId,
-				sourceFolderId: node?.parentId ?? windowEntry.sourceFolderId,
-				title: node?.kind === 'file' ? node.name : windowEntry.title
+				sourceFolderId: nextSourceFolderId,
+				title: nextTitle
 			}
 		})
+		if (changedWindowCount > 0) {
+			this.windows = nextWindows
+		}
 	}
-
-
-
 	@Spec('Renders the full operating shell UI.')
 	render(): TemplateResult {
 		const focusedWindowId = this.getFocusedWindowId()
-		const wallpaperStyle = ShellWallpaperCatalog.getBackgroundStyle(this.activeWallpaper, this.vfsSnapshot, fileId => this.virtualFileSystemService.readBinaryFile(fileId))
+		const wallpaperStyle = ShellWallpaperCatalog.getBackgroundStyle(this.activeWallpaper, this.vfsSnapshot, fileId => this.platformFileSystemService.readBinaryFile(fileId))
 		return html`
 			<div class="shell" data-theme=${this.activeTheme} data-wallpaper=${this.activeWallpaper} style=${wallpaperStyle}>
 				<header class="top-bar" data-testid="top-bar">
@@ -585,15 +639,7 @@ export class App extends LitElement {
 									<div class="window-body">
 										${AppWindowPresentation.renderWindowContent(
 											windowEntry,
-											this.activeTheme,
-											this.activeWallpaper,
-											this.vfsSnapshot,
-											this.virtualFileSystemService,
-											this.onThemeChange.bind(this),
-											this.onWallpaperChange.bind(this),
-											(nodeId: string, currentFolderId: string) => this.openNode(nodeId, currentFolderId),
-											(windowId: number, title: string) => this.onChildWindowTitleChange(windowId, title),
-											(windowId: number, nodeId: string | null) => this.onChildWindowNodeChange(windowId, nodeId)
+											this.appWindowContextRegistry.getWindowPlatformContext(windowEntry)
 										)}
 									</div>
 									<button class="window-resize-handle" data-testid=${`resize-${windowEntry.appId}`} aria-label=${`Resize ${windowEntry.title}`} @mousedown=${(event: MouseEvent) => this.beginWindowResize(windowEntry.id, event)}></button>

@@ -1,8 +1,8 @@
 import { LitElement, css, html, type PropertyValues, type TemplateResult } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
+import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
-import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
 @Spec('Renders the VFS-backed Image Viewer for image files stored in the shared virtual filesystem.')
 @customElement('iva-image-viewer-view')
@@ -89,16 +89,7 @@ export class ImageViewerView extends LitElement {
 	`
 
 	@property({ attribute: false })
-	virtualFileSystemService: VirtualFileSystemService | null = null
-
-	@property({ attribute: false })
-	snapshot: VirtualFileSystemContract['Snapshot'] | null = null
-
-	@property({ attribute: false })
-	fileNodeId: string | null = null
-
-	@property({ attribute: false })
-	onTitleChange: ((title: string) => void) | null = null
+	platformContext: PlatformContract['ApplicationContext'] | null = null
 
 	@state()
 	private imageSource: string | null = null
@@ -114,7 +105,7 @@ export class ImageViewerView extends LitElement {
 
 	@Spec('Synchronizes the current image payload and recoverable error state when the selected VFS file changes.')
 	updated(changedProperties: PropertyValues<this>): void {
-		if (changedProperties.has('snapshot') || changedProperties.has('fileNodeId')) {
+		if (changedProperties.has('platformContext')) {
 			this.synchronizeViewerState()
 		}
 	}
@@ -143,16 +134,18 @@ export class ImageViewerView extends LitElement {
 	@Spec('Reads the selected image payload from the VFS and preserves a non-crashing state when the backing file disappears.')
 	private synchronizeViewerState(): void {
 		this.dimensionsLabel = 'Unknown'
-		if (this.snapshot === null || this.virtualFileSystemService === null || this.fileNodeId === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const fileNodeId = this.platformContext?.window.openedNodeId ?? null
+		if (snapshot === null || this.platformContext === null || fileNodeId === null) {
 			this.imageSource = null
 			this.errorMessage = null
 			this.emitTitleChange()
 			return
 		}
-		const fileNode = this.snapshot.schema.nodesById[this.fileNodeId] ?? null
+		const fileNode = snapshot.schema.nodesById[fileNodeId] ?? null
 		if (fileNode !== null && this.isImageFile(fileNode)) {
 			this.lastKnownFileName = fileNode.name
-			this.imageSource = this.virtualFileSystemService.readBinaryFile(fileNode.id)
+			this.imageSource = this.platformContext.filesystem.readBinaryFile(fileNode.id)
 			this.errorMessage = this.imageSource === null ? 'This image payload is no longer available.' : null
 			this.emitTitleChange()
 			return
@@ -177,10 +170,12 @@ export class ImageViewerView extends LitElement {
 
 	@Spec('Returns the active image node when the selected file id still points to a readable image file.')
 	private getActiveImageNode(): VirtualFileSystemContract['Node'] | null {
-		if (this.snapshot === null || this.fileNodeId === null) {
+		const snapshot = this.platformContext?.filesystem.getSnapshot() ?? null
+		const fileNodeId = this.platformContext?.window.openedNodeId ?? null
+		if (snapshot === null || fileNodeId === null) {
 			return null
 		}
-		const fileNode = this.snapshot.schema.nodesById[this.fileNodeId] ?? null
+		const fileNode = snapshot.schema.nodesById[fileNodeId] ?? null
 		if (fileNode === null || this.isImageFile(fileNode) === false) {
 			return null
 		}
@@ -194,12 +189,12 @@ export class ImageViewerView extends LitElement {
 
 	@Spec('Publishes the current file title to the outer shell window header so rename and delete changes stay visible.')
 	private emitTitleChange(): void {
-		if (this.onTitleChange === null) {
+		if (this.platformContext === null) {
 			return
 		}
 		const title = this.errorMessage === null
 			? this.lastKnownFileName ?? 'Image Viewer'
 			: `${this.lastKnownFileName ?? 'Image Viewer'} (missing)`
-		this.onTitleChange(title)
+		this.platformContext.window.setTitle(title)
 	}
 }
