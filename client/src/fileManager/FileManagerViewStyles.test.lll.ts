@@ -21,18 +21,22 @@ export class FileManagerViewStylesTest {
 		return { hasSidebar, hasToolbar, hasGrid, hasList }
 	}
 
-	@Scenario('inherits theme-aware shell text, muted text, control, and error tokens')
-	static async exposesThemeAwareShellTokens(scenario: ScenarioParameter): Promise<{ hasShellText: boolean, hasMutedText: boolean, hasShellControl: boolean, hasShellError: boolean }> {
+	@Scenario('inherits theme-aware shell tokens and uses the shared density scale for layout sizing')
+	static async exposesThemeAwareShellTokens(scenario: ScenarioParameter): Promise<{ hasShellText: boolean, hasMutedText: boolean, hasShellControl: boolean, hasShellError: boolean, hasDensityScaleUsage: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const cssText = String(FileManagerViewStyles.styles)
 		const hasShellText = cssText.includes('color: var(--shell-text')
 		const hasMutedText = cssText.includes('var(--shell-muted-text')
 		const hasShellControl = cssText.includes('var(--shell-control') && cssText.includes('var(--shell-control-border')
 		const hasShellError = cssText.includes('var(--shell-error') && cssText.includes('var(--shell-error-text')
+		const hasDensityScaleUsage = cssText.includes('var(--shell-density-scale, 1)')
+			&& cssText.includes('grid-template-columns: calc(200px * var(--shell-density-scale, 1)) minmax(0, 1fr)')
+			&& cssText.includes('padding: calc(9px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1))')
 		assert(hasShellText, 'Expected File Manager styles to inherit shell text color tokens for light and dark themes')
 		assert(hasMutedText, 'Expected File Manager styles to inherit shell muted text color tokens for secondary labels')
 		assert(hasShellControl, 'Expected File Manager styles to inherit shell control surface and border tokens')
 		assert(hasShellError, 'Expected File Manager styles to inherit shell error surface and text tokens')
-		return { hasShellText, hasMutedText, hasShellControl, hasShellError }
+		assert(hasDensityScaleUsage, 'Expected File Manager styles to consume the shared shell density scale for layout and controls')
+		return { hasShellText, hasMutedText, hasShellControl, hasShellError, hasDensityScaleUsage }
 	}
 }

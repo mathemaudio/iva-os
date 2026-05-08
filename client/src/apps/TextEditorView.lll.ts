@@ -23,7 +23,7 @@ export class TextEditorView extends LitElement {
 		.editor {
 			display: grid;
 			grid-template-rows: auto auto 1fr;
-			gap: 12px;
+			gap: calc(12px * var(--shell-density-scale, 1));
 			height: 100%;
 			min-height: 0;
 		}
@@ -31,8 +31,8 @@ export class TextEditorView extends LitElement {
 		.toolbar,
 		.status,
 		.dialog {
-			padding: 12px;
-			border-radius: 14px;
+			padding: calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 			background: rgba(255, 255, 255, 0.08);
 			border: 1px solid rgba(255, 255, 255, 0.12);
 		}
@@ -40,7 +40,7 @@ export class TextEditorView extends LitElement {
 		.toolbar {
 			display: flex;
 			flex-wrap: wrap;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 			align-items: center;
 			justify-content: space-between;
 		}
@@ -48,7 +48,7 @@ export class TextEditorView extends LitElement {
 		.toolbar-actions {
 			display: flex;
 			flex-wrap: wrap;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 
 		button,
@@ -61,28 +61,28 @@ export class TextEditorView extends LitElement {
 		button,
 		select,
 		input {
-			border-radius: 12px;
+			border-radius: calc(12px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.14);
 			background: rgba(255, 255, 255, 0.08);
 			color: inherit;
 		}
 
 		button {
-			padding: 9px 12px;
+			padding: calc(9px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			cursor: pointer;
 		}
 
 		select,
 		input {
-			padding: 10px 12px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 		}
 
 		textarea {
 			width: 100%;
 			height: 100%;
-			min-height: 220px;
-			padding: 14px;
-			border-radius: 16px;
+			min-height: calc(220px * var(--shell-density-scale, 1));
+			padding: calc(14px * var(--shell-density-scale, 1));
+			border-radius: calc(16px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.14);
 			background: rgba(2, 6, 23, 0.35);
 			color: inherit;
@@ -92,8 +92,8 @@ export class TextEditorView extends LitElement {
 		}
 
 		textarea::-webkit-scrollbar {
-			width: 12px;
-			height: 12px;
+			width: calc(12px * var(--shell-density-scale, 1));
+			height: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		textarea::-webkit-scrollbar-track {
@@ -104,7 +104,7 @@ export class TextEditorView extends LitElement {
 		textarea::-webkit-scrollbar-thumb {
 			background-color: var(--text-editor-scrollbar-thumb);
 			border-radius: 999px;
-			border: 3px solid transparent;
+			border: calc(3px * var(--shell-density-scale, 1)) solid transparent;
 			background-clip: content-box;
 		}
 
@@ -118,7 +118,7 @@ export class TextEditorView extends LitElement {
 
 		.status {
 			display: grid;
-			gap: 6px;
+			gap: calc(6px * var(--shell-density-scale, 1));
 		}
 
 		.status strong,
@@ -138,20 +138,20 @@ export class TextEditorView extends LitElement {
 		}
 
 		.dialog {
-			width: min(420px, calc(100% - 24px));
+			width: min(calc(420px * var(--shell-density-scale, 1)), calc(100% - calc(24px * var(--shell-density-scale, 1))));
 			display: grid;
-			gap: 12px;
+			gap: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.form-row {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.dialog-actions {
 			display: flex;
 			justify-content: flex-end;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 	`
 

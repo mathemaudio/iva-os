@@ -21,6 +21,7 @@ export class AppShellView {
 		}
 
 		.shell {
+			--shell-density-scale: 0.88;
 			--shell-text: rgb(241, 245, 249);
 			--shell-muted-text: rgba(226, 232, 240, 0.82);
 			--shell-panel: rgba(15, 23, 42, 0.68);
@@ -48,6 +49,7 @@ export class AppShellView {
 			background-repeat: no-repeat;
 			color: var(--shell-text);
 			color-scheme: dark;
+			font-size: calc(16px * var(--shell-density-scale));
 		}
 
 		.shell[data-theme='light'] {
@@ -77,8 +79,8 @@ export class AppShellView {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			gap: 16px;
-			padding: 12px 18px;
+			gap: calc(16px * var(--shell-density-scale));
+			padding: calc(12px * var(--shell-density-scale)) calc(18px * var(--shell-density-scale));
 			background: var(--shell-panel);
 			backdrop-filter: blur(18px);
 			border-bottom: 1px solid var(--shell-control-border);
@@ -86,57 +88,57 @@ export class AppShellView {
 
 		.brand {
 			display: grid;
-			gap: 2px;
+			gap: calc(2px * var(--shell-density-scale));
 		}
 
 		.brand strong {
-			font-size: 0.95rem;
+			font-size: calc(15.2px * var(--shell-density-scale));
 			letter-spacing: 0.02em;
 		}
 
 		.brand span,
 		.top-bar-clock {
-			font-size: 0.8rem;
+			font-size: calc(12.8px * var(--shell-density-scale));
 			color: var(--shell-muted-text);
 		}
 
 		.desktop {
 			position: relative;
 			overflow: hidden;
-			padding: 22px;
+			padding: calc(22px * var(--shell-density-scale));
 		}
 
 		.desktop-empty-state {
 			position: absolute;
-			left: 24px;
-			top: 24px;
-			padding: 14px 16px;
-			border-radius: 14px;
+			left: calc(24px * var(--shell-density-scale));
+			top: calc(24px * var(--shell-density-scale));
+			padding: calc(14px * var(--shell-density-scale)) calc(16px * var(--shell-density-scale));
+			border-radius: calc(14px * var(--shell-density-scale));
 			background: var(--shell-overlay);
 			border: 1px solid var(--shell-control-border);
-			max-width: 320px;
+			max-width: calc(320px * var(--shell-density-scale));
 		}
 
 		.desktop-empty-state strong {
 			display: block;
-			margin-bottom: 6px;
+			margin-bottom: calc(6px * var(--shell-density-scale));
 		}
 
 		.windows {
 			position: absolute;
-			inset: 22px;
+			inset: calc(22px * var(--shell-density-scale));
 		}
 
 		.window-shell {
 			position: absolute;
 			width: min(420px, calc(100vw - 88px));
-			min-height: 220px;
-			border-radius: 18px;
+			min-height: calc(220px * var(--shell-density-scale));
+			border-radius: calc(18px * var(--shell-density-scale));
 			overflow: hidden;
 			border: 1px solid var(--shell-control-border);
 			background: var(--shell-panel-strong);
 			backdrop-filter: blur(18px);
-			box-shadow: 0 22px 65px var(--shell-shadow);
+			box-shadow: 0 calc(22px * var(--shell-density-scale)) calc(65px * var(--shell-density-scale)) var(--shell-shadow);
 		}
 
 		.window-shell[data-maximized='true'] {
@@ -154,8 +156,8 @@ export class AppShellView {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			gap: 12px;
-			padding: 14px 16px;
+			gap: calc(12px * var(--shell-density-scale));
+			padding: calc(14px * var(--shell-density-scale)) calc(16px * var(--shell-density-scale));
 			background: var(--shell-panel);
 			border-bottom: 1px solid var(--shell-control-border);
 			cursor: grab;
@@ -169,13 +171,13 @@ export class AppShellView {
 		.window-title {
 			display: flex;
 			align-items: center;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale));
 			font-weight: 700;
 		}
 
 		.window-controls {
 			display: flex;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale));
 		}
 
 		.window-controls button,
@@ -191,16 +193,16 @@ export class AppShellView {
 		.window-controls button,
 		.launcher-toggle,
 		.dock button {
-			border-radius: 12px;
-			padding: 8px 10px;
+			border-radius: calc(12px * var(--shell-density-scale));
+			padding: calc(8px * var(--shell-density-scale)) calc(10px * var(--shell-density-scale));
 			cursor: pointer;
 		}
 
 		.window-body {
-			padding: 18px;
+			padding: calc(18px * var(--shell-density-scale));
 			display: grid;
-			gap: 14px;
-			height: calc(100% - 61px);
+			gap: calc(14px * var(--shell-density-scale));
+			height: calc(100% - calc(61px * var(--shell-density-scale)));
 			min-height: 0;
 			overflow: auto;
 			scrollbar-gutter: stable both-edges;
@@ -209,8 +211,8 @@ export class AppShellView {
 		}
 
 		.window-body::-webkit-scrollbar {
-			width: 12px;
-			height: 12px;
+			width: calc(12px * var(--shell-density-scale));
+			height: calc(12px * var(--shell-density-scale));
 		}
 
 		.window-body::-webkit-scrollbar-track {
@@ -221,7 +223,7 @@ export class AppShellView {
 		.window-body::-webkit-scrollbar-thumb {
 			background-color: var(--shell-scrollbar-thumb);
 			border-radius: 999px;
-			border: 3px solid transparent;
+			border: calc(3px * var(--shell-density-scale)) solid transparent;
 			background-clip: content-box;
 		}
 
@@ -237,8 +239,8 @@ export class AppShellView {
 			position: absolute;
 			right: 0;
 			bottom: 0;
-			width: 20px;
-			height: 20px;
+			width: calc(20px * var(--shell-density-scale));
+			height: calc(20px * var(--shell-density-scale));
 			border: 0;
 			padding: 0;
 			background:
@@ -265,50 +267,50 @@ export class AppShellView {
 
 		.settings-grid {
 			display: grid;
-			gap: 14px;
+			gap: calc(14px * var(--shell-density-scale));
 		}
 
 		.settings-panel {
-			padding: 14px;
-			border-radius: 14px;
+			padding: calc(14px * var(--shell-density-scale));
+			border-radius: calc(14px * var(--shell-density-scale));
 			background: var(--shell-control);
 			border: 1px solid var(--shell-control-border);
 			display: grid;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale));
 		}
 
 		.settings-panel header {
 			display: grid;
-			gap: 4px;
+			gap: calc(4px * var(--shell-density-scale));
 		}
 
 		.settings-row {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale));
 		}
 
 		.settings-select {
-			padding: 10px 12px;
-			border-radius: 12px;
+			padding: calc(10px * var(--shell-density-scale)) calc(12px * var(--shell-density-scale));
+			border-radius: calc(12px * var(--shell-density-scale));
 		}
 
 		.settings-note {
-			font-size: 0.82rem;
+			font-size: calc(13.12px * var(--shell-density-scale));
 			color: var(--shell-muted-text);
 		}
 
 		.dock-region {
 			display: flex;
 			justify-content: center;
-			padding: 0 0 18px;
+			padding: 0 0 calc(18px * var(--shell-density-scale));
 		}
 
 		.dock {
 			display: flex;
 			align-items: center;
-			gap: 10px;
-			padding: 12px;
-			border-radius: 22px;
+			gap: calc(10px * var(--shell-density-scale));
+			padding: calc(12px * var(--shell-density-scale));
+			border-radius: calc(22px * var(--shell-density-scale));
 			background: var(--shell-panel);
 			backdrop-filter: blur(18px);
 			border: 1px solid var(--shell-control-border);
@@ -316,9 +318,9 @@ export class AppShellView {
 		}
 
 		.dock button {
-			min-width: 88px;
+			min-width: calc(88px * var(--shell-density-scale));
 			display: grid;
-			gap: 4px;
+			gap: calc(4px * var(--shell-density-scale));
 			justify-items: center;
 		}
 
@@ -328,29 +330,29 @@ export class AppShellView {
 
 		.launcher-panel {
 			position: absolute;
-			left: 22px;
-			bottom: 100px;
+			left: calc(22px * var(--shell-density-scale));
+			bottom: calc(100px * var(--shell-density-scale));
 			width: min(460px, calc(100vw - 44px));
-			padding: 18px;
-			border-radius: 20px;
+			padding: calc(18px * var(--shell-density-scale));
+			border-radius: calc(20px * var(--shell-density-scale));
 			background: var(--shell-panel-strong);
 			border: 1px solid var(--shell-control-border);
 			backdrop-filter: blur(18px);
-			box-shadow: 0 22px 65px var(--shell-shadow);
+			box-shadow: 0 calc(22px * var(--shell-density-scale)) calc(65px * var(--shell-density-scale)) var(--shell-shadow);
 		}
 
 		.launcher-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-			gap: 12px;
-			margin-top: 14px;
+			grid-template-columns: repeat(auto-fit, minmax(calc(130px * var(--shell-density-scale)), 1fr));
+			gap: calc(12px * var(--shell-density-scale));
+			margin-top: calc(14px * var(--shell-density-scale));
 		}
 
 		.launcher-card {
 			display: grid;
-			gap: 8px;
-			padding: 14px;
-			border-radius: 16px;
+			gap: calc(8px * var(--shell-density-scale));
+			padding: calc(14px * var(--shell-density-scale));
+			border-radius: calc(16px * var(--shell-density-scale));
 			cursor: pointer;
 			text-align: left;
 		}
@@ -368,14 +370,14 @@ export class AppShellView {
 		}
 
 		.icon-tile {
-			font-size: 1.6rem;
+			font-size: calc(25.6px * var(--shell-density-scale));
 		}
 
 		.status-pill {
 			display: inline-flex;
 			align-items: center;
-			gap: 8px;
-			padding: 8px 12px;
+			gap: calc(8px * var(--shell-density-scale));
+			padding: calc(8px * var(--shell-density-scale)) calc(12px * var(--shell-density-scale));
 			width: fit-content;
 			border-radius: 999px;
 			background: var(--shell-status);

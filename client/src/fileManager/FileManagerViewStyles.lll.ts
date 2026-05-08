@@ -31,7 +31,7 @@ export class FileManagerViewStyles {
 
 		.file-manager {
 			display: grid;
-			grid-template-columns: 200px minmax(0, 1fr);
+			grid-template-columns: calc(200px * var(--shell-density-scale, 1)) minmax(0, 1fr);
 			height: 100%;
 			min-height: 0;
 			background: var(--shell-overlay, rgba(8, 15, 33, 0.28));
@@ -40,8 +40,8 @@ export class FileManagerViewStyles {
 		.sidebar {
 			display: grid;
 			align-content: start;
-			gap: 10px;
-			padding: 16px;
+			gap: calc(10px * var(--shell-density-scale, 1));
+			padding: calc(16px * var(--shell-density-scale, 1));
 			background: color-mix(in srgb, var(--shell-panel, rgba(15, 23, 42, 0.68)) 72%, transparent);
 			border-right: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
 		}
@@ -54,7 +54,7 @@ export class FileManagerViewStyles {
 
 		.sidebar-list {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.sidebar-button,
@@ -76,11 +76,11 @@ export class FileManagerViewStyles {
 		.dialog button,
 		.dialog select,
 		.dialog input {
-			border-radius: 12px;
+			border-radius: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.sidebar-button {
-			padding: 10px 12px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			text-align: left;
 		}
 
@@ -99,13 +99,13 @@ export class FileManagerViewStyles {
 		.toolbar {
 			display: flex;
 			flex-wrap: wrap;
-			gap: 10px;
-			padding: 16px 16px 12px;
+			gap: calc(10px * var(--shell-density-scale, 1));
+			padding: calc(16px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			border-bottom: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
 		}
 
 		.toolbar button {
-			padding: 9px 12px;
+			padding: calc(9px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.toolbar button:disabled {
@@ -115,12 +115,12 @@ export class FileManagerViewStyles {
 
 		.location-bar {
 			display: grid;
-			gap: 10px;
-			padding: 14px 16px 0;
+			gap: calc(10px * var(--shell-density-scale, 1));
+			padding: calc(14px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1)) 0;
 		}
 
 		.current-folder {
-			font-size: 1rem;
+			font-size: calc(16px * var(--shell-density-scale, 1));
 			font-weight: 700;
 		}
 
@@ -128,23 +128,23 @@ export class FileManagerViewStyles {
 			display: flex;
 			flex-wrap: wrap;
 			align-items: center;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.breadcrumb-button {
-			padding: 6px 10px;
+			padding: calc(6px * var(--shell-density-scale, 1)) calc(10px * var(--shell-density-scale, 1));
 		}
 
 		.status-stack {
 			display: grid;
-			gap: 10px;
-			padding: 12px 16px 0;
+			gap: calc(10px * var(--shell-density-scale, 1));
+			padding: calc(12px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1)) 0;
 		}
 
 		.status-pill,
 		.error-pill {
-			padding: 10px 12px;
-			border-radius: 14px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 			border: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
 		}
 
@@ -161,7 +161,7 @@ export class FileManagerViewStyles {
 		}
 
 		.content-region {
-			padding: 16px;
+			padding: calc(16px * var(--shell-density-scale, 1));
 			min-height: 0;
 			overflow: auto;
 			scrollbar-color: var(--file-manager-scrollbar-thumb) var(--file-manager-scrollbar-track);
@@ -169,8 +169,8 @@ export class FileManagerViewStyles {
 		}
 
 		.content-region::-webkit-scrollbar {
-			width: 12px;
-			height: 12px;
+			width: calc(12px * var(--shell-density-scale, 1));
+			height: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.content-region::-webkit-scrollbar-track {
@@ -181,7 +181,7 @@ export class FileManagerViewStyles {
 		.content-region::-webkit-scrollbar-thumb {
 			background-color: var(--file-manager-scrollbar-thumb);
 			border-radius: 999px;
-			border: 3px solid transparent;
+			border: calc(3px * var(--shell-density-scale, 1)) solid transparent;
 			background-clip: content-box;
 		}
 
@@ -196,30 +196,30 @@ export class FileManagerViewStyles {
 		.empty-state {
 			display: grid;
 			justify-items: start;
-			gap: 8px;
-			padding: 24px;
-			border-radius: 18px;
+			gap: calc(8px * var(--shell-density-scale, 1));
+			padding: calc(24px * var(--shell-density-scale, 1));
+			border-radius: calc(18px * var(--shell-density-scale, 1));
 			background: color-mix(in srgb, var(--shell-control, rgba(255, 255, 255, 0.08)) 78%, transparent);
 			border: 1px dashed var(--shell-control-border, rgba(255, 255, 255, 0.14));
 		}
 
 		.grid-view {
 			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-			gap: 14px;
+			grid-template-columns: repeat(auto-fill, minmax(calc(140px * var(--shell-density-scale, 1)), 1fr));
+			gap: calc(14px * var(--shell-density-scale, 1));
 		}
 
 		.node-card,
 		.node-row {
 			display: grid;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 			text-align: left;
 		}
 
 		.node-card {
-			padding: 14px;
-			border-radius: 16px;
-			min-height: 148px;
+			padding: calc(14px * var(--shell-density-scale, 1));
+			border-radius: calc(16px * var(--shell-density-scale, 1));
+			min-height: calc(148px * var(--shell-density-scale, 1));
 			align-content: start;
 		}
 
@@ -238,16 +238,16 @@ export class FileManagerViewStyles {
 		.node-preview {
 			display: grid;
 			place-items: center;
-			min-height: 68px;
-			border-radius: 14px;
+			min-height: calc(68px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 			background: color-mix(in srgb, var(--shell-panel-strong, rgba(15, 23, 42, 0.82)) 34%, transparent);
-			font-size: 2rem;
+			font-size: calc(32px * var(--shell-density-scale, 1));
 			overflow: hidden;
 		}
 
 		.node-preview img {
 			width: 100%;
-			height: 68px;
+			height: calc(68px * var(--shell-density-scale, 1));
 			object-fit: cover;
 			display: block;
 		}
@@ -258,41 +258,41 @@ export class FileManagerViewStyles {
 		}
 
 		.node-meta {
-			font-size: 0.78rem;
+			font-size: calc(12.48px * var(--shell-density-scale, 1));
 			color: var(--shell-muted-text, rgba(226, 232, 240, 0.82));
 			word-break: break-word;
 		}
 
 		.list-view {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.list-header,
 		.node-row {
-			grid-template-columns: minmax(0, 1.6fr) minmax(110px, 0.9fr) minmax(130px, 0.9fr) minmax(70px, 0.55fr);
+			grid-template-columns: minmax(0, 1.6fr) minmax(calc(110px * var(--shell-density-scale, 1)), 0.9fr) minmax(calc(130px * var(--shell-density-scale, 1)), 0.9fr) minmax(calc(70px * var(--shell-density-scale, 1)), 0.55fr);
 			align-items: center;
 		}
 
 		.list-header {
 			display: grid;
-			gap: 10px;
-			padding: 0 14px 8px;
-			font-size: 0.78rem;
+			gap: calc(10px * var(--shell-density-scale, 1));
+			padding: 0 calc(14px * var(--shell-density-scale, 1)) calc(8px * var(--shell-density-scale, 1));
+			font-size: calc(12.48px * var(--shell-density-scale, 1));
 			text-transform: uppercase;
 			letter-spacing: 0.05em;
 			color: var(--shell-muted-text, rgba(226, 232, 240, 0.82));
 		}
 
 		.node-row {
-			padding: 12px 14px;
-			border-radius: 14px;
+			padding: calc(12px * var(--shell-density-scale, 1)) calc(14px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 		}
 
 		.node-row-name {
 			display: flex;
 			align-items: center;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 			min-width: 0;
 		}
 
@@ -303,9 +303,9 @@ export class FileManagerViewStyles {
 		}
 
 		.row-thumbnail {
-			width: 28px;
-			height: 28px;
-			border-radius: 8px;
+			width: calc(28px * var(--shell-density-scale, 1));
+			height: calc(28px * var(--shell-density-scale, 1));
+			border-radius: calc(8px * var(--shell-density-scale, 1));
 			object-fit: cover;
 			background: color-mix(in srgb, var(--shell-panel-strong, rgba(15, 23, 42, 0.82)) 34%, transparent);
 		}
@@ -315,20 +315,20 @@ export class FileManagerViewStyles {
 			inset: 0;
 			display: grid;
 			place-items: center;
-			padding: 20px;
+			padding: calc(20px * var(--shell-density-scale, 1));
 			background: color-mix(in srgb, var(--shell-panel-strong, rgba(15, 23, 42, 0.82)) 52%, transparent);
 			backdrop-filter: blur(8px);
 		}
 
 		.dialog {
-			width: min(420px, 100%);
+			width: min(calc(420px * var(--shell-density-scale, 1)), 100%);
 			display: grid;
-			gap: 14px;
-			padding: 18px;
-			border-radius: 18px;
+			gap: calc(14px * var(--shell-density-scale, 1));
+			padding: calc(18px * var(--shell-density-scale, 1));
+			border-radius: calc(18px * var(--shell-density-scale, 1));
 			background: color-mix(in srgb, var(--shell-panel-strong, rgba(15, 23, 42, 0.82)) 96%, white 4%);
 			border: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
-			box-shadow: 0 22px 60px var(--shell-shadow, rgba(15, 23, 42, 0.42));
+			box-shadow: 0 calc(22px * var(--shell-density-scale, 1)) calc(60px * var(--shell-density-scale, 1)) var(--shell-shadow, rgba(15, 23, 42, 0.42));
 		}
 
 		.dialog p,
@@ -339,17 +339,17 @@ export class FileManagerViewStyles {
 		.dialog input,
 		.dialog select {
 			width: 100%;
-			padding: 10px 12px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.dialog-actions {
 			display: flex;
 			justify-content: end;
-			gap: 10px;
+			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 
 		.dialog-actions button {
-			padding: 9px 12px;
+			padding: calc(9px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.sr-only {

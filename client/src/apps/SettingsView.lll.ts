@@ -15,14 +15,14 @@ export class SettingsView extends LitElement {
 
 		.settings-grid {
 			display: grid;
-			gap: 14px;
+			gap: calc(14px * var(--shell-density-scale, 1));
 		}
 
 		.status-pill {
 			display: inline-flex;
 			align-items: center;
-			gap: 8px;
-			padding: 8px 12px;
+			gap: calc(8px * var(--shell-density-scale, 1));
+			padding: calc(8px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			width: fit-content;
 			border-radius: 999px;
 			background: rgba(255, 255, 255, 0.1);
@@ -31,9 +31,9 @@ export class SettingsView extends LitElement {
 
 		.settings-panel {
 			display: grid;
-			gap: 12px;
-			padding: 16px;
-			border-radius: 16px;
+			gap: calc(12px * var(--shell-density-scale, 1));
+			padding: calc(16px * var(--shell-density-scale, 1));
+			border-radius: calc(16px * var(--shell-density-scale, 1));
 			background: rgba(255, 255, 255, 0.08);
 			border: 1px solid rgba(255, 255, 255, 0.12);
 		}
@@ -41,7 +41,7 @@ export class SettingsView extends LitElement {
 		header,
 		.settings-row {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.settings-note,
@@ -57,8 +57,8 @@ export class SettingsView extends LitElement {
 
 		.settings-select {
 			font: inherit;
-			padding: 10px 12px;
-			border-radius: 12px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(12px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.14);
 			background: rgba(255, 255, 255, 0.08);
 			color: inherit;

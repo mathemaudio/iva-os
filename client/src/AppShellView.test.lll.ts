@@ -22,8 +22,8 @@ export class AppShellViewTest {
 		return { hasThemeSelect, hasWallpaperSelect }
 	}
 
-	@Scenario('includes scrollable window body, resize handle, and theme-aware scrollbar shell styles')
-	static async includesResizeAndScrollShellStyles(scenario: ScenarioParameter): Promise<{ hasWindowBodyOverflow: boolean, hasResizeHandle: boolean, hasThemeAwareScrollbarStyles: boolean }> {
+	@Scenario('includes scrollable window body, resize handle, theme-aware scrollbars, and a shared density token')
+	static async includesResizeAndScrollShellStyles(scenario: ScenarioParameter): Promise<{ hasWindowBodyOverflow: boolean, hasResizeHandle: boolean, hasThemeAwareScrollbarStyles: boolean, hasDensityScale: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const cssText = String(AppShellView.styles)
 		const hasWindowBodyOverflow = cssText.includes('.window-body') && cssText.includes('overflow: auto')
@@ -31,9 +31,13 @@ export class AppShellViewTest {
 		const hasThemeAwareScrollbarStyles = cssText.includes('--shell-scrollbar-thumb')
 			&& cssText.includes(".shell[data-theme='light']")
 			&& cssText.includes('scrollbar-color: var(--shell-scrollbar-thumb) var(--shell-scrollbar-track)')
+		const hasDensityScale = cssText.includes('--shell-density-scale: 0.88')
+			&& cssText.includes('font-size: calc(16px * var(--shell-density-scale))')
+			&& cssText.includes('padding: calc(8px * var(--shell-density-scale)) calc(10px * var(--shell-density-scale))')
 		assert(hasWindowBodyOverflow, 'Expected shell styles to make window bodies scrollable')
 		assert(hasResizeHandle, 'Expected shell styles to include the resize handle rules')
 		assert(hasThemeAwareScrollbarStyles, 'Expected shell styles to include theme-aware scrollbar colors for dark and light modes')
-		return { hasWindowBodyOverflow, hasResizeHandle, hasThemeAwareScrollbarStyles }
+		assert(hasDensityScale, 'Expected shell styles to expose and apply a shared density scale token')
+		return { hasWindowBodyOverflow, hasResizeHandle, hasThemeAwareScrollbarStyles, hasDensityScale }
 	}
 }

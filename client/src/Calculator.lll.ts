@@ -8,36 +8,36 @@ export class Calculator extends LitElement {
 	static styles = css`
 		:host {
 			display: block;
-			max-width: 320px;
-			padding: 14px;
-			border-radius: 14px;
+			max-width: calc(320px * var(--shell-density-scale, 1));
+			padding: calc(14px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.16);
 			background: rgba(9, 14, 24, 0.78);
-			box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+			box-shadow: 0 calc(12px * var(--shell-density-scale, 1)) calc(28px * var(--shell-density-scale, 1)) rgba(0, 0, 0, 0.25);
 		}
 
 		.display {
 			width: 100%;
 			box-sizing: border-box;
-			padding: 10px 12px;
-			margin-bottom: 10px;
-			border-radius: 10px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
+			margin-bottom: calc(10px * var(--shell-density-scale, 1));
+			border-radius: calc(10px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.25);
 			background: rgba(255, 255, 255, 0.1);
 			color: #f8fbff;
-			font-size: 1.25rem;
+			font-size: calc(20px * var(--shell-density-scale, 1));
 			text-align: right;
 		}
 
 		.memory,
 		.pad {
 			display: grid;
-			gap: 8px;
+			gap: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.memory {
 			grid-template-columns: repeat(4, 1fr);
-			margin-bottom: 8px;
+			margin-bottom: calc(8px * var(--shell-density-scale, 1));
 		}
 
 		.pad {
@@ -45,12 +45,12 @@ export class Calculator extends LitElement {
 		}
 
 		button {
-			padding: 10px 8px;
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(8px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.18);
-			border-radius: 10px;
+			border-radius: calc(10px * var(--shell-density-scale, 1));
 			background: rgba(255, 255, 255, 0.1);
 			color: #eef4ff;
-			font-size: 0.95rem;
+			font-size: calc(15.2px * var(--shell-density-scale, 1));
 			font-weight: 700;
 			cursor: pointer;
 		}

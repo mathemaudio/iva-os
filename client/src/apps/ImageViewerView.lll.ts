@@ -22,36 +22,36 @@ export class ImageViewerView extends LitElement {
 		.viewer {
 			display: grid;
 			grid-template-rows: auto 1fr;
-			gap: 12px;
+			gap: calc(12px * var(--shell-density-scale, 1));
 			height: 100%;
 			min-height: 0;
 		}
 
 		.panel,
 		.preview {
-			padding: 12px;
-			border-radius: 14px;
+			padding: calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
 			background: rgba(255, 255, 255, 0.08);
 			border: 1px solid rgba(255, 255, 255, 0.12);
 		}
 
 		.panel {
 			display: grid;
-			gap: 6px;
+			gap: calc(6px * var(--shell-density-scale, 1));
 		}
 
 		.preview {
 			display: grid;
 			place-items: center;
-			min-height: 220px;
+			min-height: calc(220px * var(--shell-density-scale, 1));
 			overflow: auto;
 			scrollbar-color: var(--image-viewer-scrollbar-thumb) var(--image-viewer-scrollbar-track);
 			scrollbar-width: thin;
 		}
 
 		.preview::-webkit-scrollbar {
-			width: 12px;
-			height: 12px;
+			width: calc(12px * var(--shell-density-scale, 1));
+			height: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.preview::-webkit-scrollbar-track {
@@ -62,7 +62,7 @@ export class ImageViewerView extends LitElement {
 		.preview::-webkit-scrollbar-thumb {
 			background-color: var(--image-viewer-scrollbar-thumb);
 			border-radius: 999px;
-			border: 3px solid transparent;
+			border: calc(3px * var(--shell-density-scale, 1)) solid transparent;
 			background-clip: content-box;
 		}
 
@@ -77,7 +77,7 @@ export class ImageViewerView extends LitElement {
 		img {
 			max-width: 100%;
 			max-height: 100%;
-			border-radius: 12px;
+			border-radius: calc(12px * var(--shell-density-scale, 1));
 			object-fit: contain;
 		}
 
