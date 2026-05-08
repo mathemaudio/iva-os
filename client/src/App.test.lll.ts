@@ -202,6 +202,64 @@ export class AppTest {
 		return { hasWindow, title, dockRunning }
 	}
 
+	@Scenario('opens Activity Monitor and shows running apps, event history, and runtime stats tabs')
+	static async opensActivityMonitorAndShowsTabs(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ runningApps: number, eventCount: number, hasMemoryMetric: boolean }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="dock-app-settings"]')
+		await waitFor(() => this.find(app, '[data-testid="window-settings"]') !== null, 'Expected Settings to open before creating monitorable settings events')
+		const settingsWindow = this.find(app, 'iva-settings-view')
+		const themeSelect = settingsWindow?.shadowRoot?.querySelector('[data-testid="theme-select"]') ?? null
+		assert(themeSelect instanceof HTMLSelectElement, 'Expected Settings theme select to exist before opening Activity Monitor')
+		themeSelect.value = 'light'
+		themeSelect.dispatchEvent(new Event('change', { bubbles: true }))
+		await app.updateComplete
+
+		this.click(app, '[data-testid="dock-app-activity-monitor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-activity-monitor"]') !== null, 'Expected Activity Monitor to open from the dock')
+		await waitFor(() => this.find(app, 'iva-activity-monitor-view') !== null, 'Expected the Activity Monitor host element to render inside the shell')
+		const runningApps = this.findAllInActivityMonitor(app, '[data-testid^="activity-monitor-running-app-"]').length
+		assert(runningApps >= 2, 'Expected Activity Monitor to list File Manager and its own running window at minimum')
+		this.clickInActivityMonitor(app, '[data-testid="activity-monitor-tab-signals-events"]')
+		await app.updateComplete
+		const eventCount = this.findAllInActivityMonitor(app, '[data-testid^="activity-monitor-event-"]').length
+		assert(eventCount >= 1, 'Expected Activity Monitor to show recorded runtime events after shell interactions')
+		this.clickInActivityMonitor(app, '[data-testid="activity-monitor-tab-runtime-stats"]')
+		await app.updateComplete
+		const hasMemoryMetric = this.findInActivityMonitor(app, '[data-testid="activity-monitor-stat-memory"]') !== null
+		const runtimeStatsText = this.readTextInActivityMonitor(app, '[data-testid="activity-monitor-runtime-stats-panel"]').toLowerCase()
+		assert(hasMemoryMetric, 'Expected Activity Monitor runtime stats to show the memory metric card')
+		assert(runtimeStatsText.includes('cpu') === false, 'Expected Activity Monitor runtime stats to omit CPU load')
+		assert(runtimeStatsText.includes('thread') === false, 'Expected Activity Monitor runtime stats to omit thread metrics')
+		return { runningApps, eventCount, hasMemoryMetric }
+	}
+
+	@Scenario('keeps the selected Activity Monitor tab while other windows are focused')
+	static async keepsActivityMonitorTabSelectionAcrossWindowFocusChanges(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ remainedOnSignalsTab: boolean, eventCount: number }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="dock-app-activity-monitor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-activity-monitor"]') !== null, 'Expected Activity Monitor to open from the dock')
+		await waitFor(() => this.findInActivityMonitor(app, '[data-testid="activity-monitor-tab-signals-events"]') !== null, 'Expected Activity Monitor tabs to render')
+		this.clickInActivityMonitor(app, '[data-testid="activity-monitor-tab-signals-events"]')
+		await app.updateComplete
+		this.click(app, '[data-testid="window-file-manager"]')
+		await app.updateComplete
+		const remainedOnSignalsTab = this.findInActivityMonitor(app, '[data-testid="activity-monitor-signals-events-panel"]') !== null
+		const eventCount = this.findAllInActivityMonitor(app, '[data-testid^="activity-monitor-event-"]').length
+		assert(remainedOnSignalsTab, 'Expected Activity Monitor to stay on the Signals & Events tab after other windows receive focus')
+		assert(eventCount >= 1, 'Expected the Signals & Events tab to remain visible with recorded events after focus changes')
+		return { remainedOnSignalsTab, eventCount }
+	}
+
 	@Scenario('keeps file manager navigation stable while another app opens from the selected folder')
 	static async preservesFileManagerNavigationAcrossOtherWindowUpdates(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ currentFolderBeforeOpen: string, currentFolderAfterOpen: string, documentsStillVisible: boolean }> {
 		const assert: AssertFn = scenario.assert
@@ -392,6 +450,36 @@ export class AppTest {
 	private static findInImageViewer(app: App, selector: string): HTMLElement | null {
 		const imageViewer = this.find(app, 'iva-image-viewer-view')
 		return imageViewer?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Finds one element inside the nested Activity Monitor shadow root by selector.')
+	private static findInActivityMonitor(app: App, selector: string): HTMLElement | null {
+		const activityMonitor = this.find(app, 'iva-activity-monitor-view')
+		return activityMonitor?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Finds all matching elements inside the nested Activity Monitor shadow root by selector.')
+	private static findAllInActivityMonitor(app: App, selector: string): HTMLElement[] {
+		const activityMonitor = this.find(app, 'iva-activity-monitor-view')
+		return Array.from(activityMonitor?.shadowRoot?.querySelectorAll<HTMLElement>(selector) ?? [])
+	}
+
+	@Spec('Clicks one element inside the nested Activity Monitor shadow root by selector.')
+	private static clickInActivityMonitor(app: App, selector: string): void {
+		const element = this.findInActivityMonitor(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Activity Monitor element to exist for selector: ${selector}`)
+		}
+		element.click()
+	}
+
+	@Spec('Reads text content from one element inside the nested Activity Monitor shadow root.')
+	private static readTextInActivityMonitor(app: App, selector: string): string {
+		const element = this.findInActivityMonitor(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Activity Monitor text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
 	}
 
 	@Spec('Reads text content from one element inside the nested Image Viewer shadow root.')

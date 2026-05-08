@@ -3,6 +3,8 @@ import type { App } from '../App.lll'
 import { PlatformContextFactory } from '../platform/PlatformContextFactory.lll';
 
 import type { PlatformContract } from '../platform/PlatformContract.lll';
+import { AppChildWindowBridge } from './windowing/AppChildWindowBridge.lll';
+
 
 
 @Spec("Provides stable platform application contexts for shell windows so app views are not reset on every shell render.")
@@ -30,8 +32,9 @@ export class AppWindowContextRegistry {
 				this.source.platformFileSystemService.toContract(),
 				this.source.platformSettingsService.toContract(),
 				this.source.platformLauncherService.toContract(),
-				(title: string) => this.source.onChildWindowTitleChange(windowEntry.id, title),
-				(nodeId: string | null) => this.source.onChildWindowNodeChange(windowEntry.id, nodeId)
+				this.source.platformRuntimeService.toContract(),
+				(title: string) => this.source.appChildWindowBridge.handleTitleChange(windowEntry.id, title),
+				(nodeId: string | null) => this.source.appChildWindowBridge.handleNodeChange(windowEntry.id, nodeId)
 			)
 			this.source.windowContextsByWindowId.set(windowEntry.id, nextContext)
 			return nextContext

@@ -1,7 +1,7 @@
 import { Spec } from '@shared/lll.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
 
-Spec('Defines stable client-side platform contracts for app-facing filesystem, settings, launcher, and window session capabilities.')
+Spec('Defines stable client-side platform contracts for app-facing filesystem, settings, launcher, window session, and runtime monitoring capabilities.')
 export type PlatformContract = {
 	FileSystemService: {
 		getSnapshot: () => VirtualFileSystemContract['Snapshot']
@@ -39,11 +39,55 @@ export type PlatformContract = {
 		openNode: (nodeId: string, currentFolderId: string | null) => void
 		openApp: (appId: string, openedNodeId: string | null, sourceFolderId: string | null) => void
 	}
+	RuntimeRunningApp: {
+		windowId: number
+		appId: string
+		appName: string
+		title: string
+		icon: string
+		isFocused: boolean
+		isMinimized: boolean
+		startedAt: string
+		runningForMs: number
+	}
+	RuntimeEvent: {
+		id: number
+		timestamp: string
+		direction: 'incoming' | 'outgoing' | 'internal'
+		category: 'launcher' | 'window' | 'filesystem' | 'settings' | 'runtime'
+		title: string
+		detail: string
+	}
+	RuntimeStats: {
+		memoryUsedBytes: number | null
+		memoryLimitBytes: number | null
+		windowCount: number
+		runningAppCount: number
+		visibleWindowCount: number
+		minimizedWindowCount: number
+		vfsNodeCount: number
+		vfsFileCount: number
+		vfsFolderCount: number
+		vfsStoredBytes: number
+		localStorageBytes: number | null
+		uptimeMs: number
+	}
+	RuntimeSnapshot: {
+		sessionStartedAt: string
+		runningApps: PlatformContract['RuntimeRunningApp'][]
+		events: PlatformContract['RuntimeEvent'][]
+		stats: PlatformContract['RuntimeStats']
+	}
+	RuntimeService: {
+		getSnapshot: () => PlatformContract['RuntimeSnapshot']
+		subscribe: (listener: (snapshot: PlatformContract['RuntimeSnapshot']) => void) => () => void
+	}
 	ApplicationContext: {
 		appId: string
 		filesystem: PlatformContract['FileSystemService']
 		settings: PlatformContract['SettingsService']
 		launcher: PlatformContract['LauncherService']
+		runtime: PlatformContract['RuntimeService']
 		window: PlatformContract['WindowSession']
 	}
 }

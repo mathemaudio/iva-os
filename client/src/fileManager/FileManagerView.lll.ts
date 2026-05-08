@@ -366,6 +366,7 @@ export class FileManagerView extends LitElement {
 		this.selectedNodeId = null
 		this.focusedNodeId = null
 		this.errorMessage = null
+		this.platformContext?.window.setOpenedNodeId(folderId)
 	}
 
 	@Spec('Selects one visible node as the current single selection.')

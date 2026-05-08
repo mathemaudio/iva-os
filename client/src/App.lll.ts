@@ -1,10 +1,12 @@
 import { LitElement, html, type TemplateResult } from 'lit'
+import { repeat } from 'lit/directives/repeat.js'
 import { customElement, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
 import './fileManager/FileManagerView.lll'
 import './apps/TextEditorView.lll'
 import './apps/ImageViewerView.lll'
 import './apps/SettingsView.lll'
+import './apps/ActivityMonitorView.lll'
 import { AppShellView } from './AppShellView.lll'
 import { AppAssociationRegistry } from './shell/AppAssociationRegistry.lll'
 import { ShellWallpaperCatalog } from './shell/ShellWallpaperCatalog.lll'
@@ -18,7 +20,12 @@ import { PlatformFileSystemService } from './platform/PlatformFileSystemService.
 import { PlatformSettingsService } from './platform/PlatformSettingsService.lll'
 import { PlatformAppLauncherService } from './platform/PlatformAppLauncherService.lll'
 import type { PlatformContract } from './platform/PlatformContract.lll'
+import { PlatformRuntimeService } from './platform/runtime/PlatformRuntimeService.lll'
 import { AppWindowContextRegistry } from './shell/AppWindowContextRegistry.lll';
+import { AppRuntimeSnapshotBuilder } from './shell/runtime/AppRuntimeSnapshotBuilder.lll';
+import { AppChildWindowBridge } from './shell/windowing/AppChildWindowBridge.lll';
+
+
 
 
 
@@ -26,9 +33,13 @@ import { AppWindowContextRegistry } from './shell/AppWindowContextRegistry.lll';
 @Spec('Composes the browser-hosted operating shell with shared VFS-backed apps, launcher routing, and persisted appearance settings.')
 @customElement('app-root')
 export class App extends LitElement {
+	public readonly appChildWindowBridge = new AppChildWindowBridge(this);
+
+	private readonly appRuntimeSnapshotBuilder = new AppRuntimeSnapshotBuilder(this);
+
 	private readonly appWindowContextRegistry = new AppWindowContextRegistry(this);
 
-	private readonly appWindowCatalog = new AppWindowCatalog()
+	public readonly appWindowCatalog = new AppWindowCatalog()
 	static styles = AppShellView.styles
 
 	@state()
@@ -41,13 +52,13 @@ export class App extends LitElement {
 	private isLauncherOpen: boolean = false
 
 	@state()
-	private vfsSnapshot: VirtualFileSystemContract['Snapshot']
+	public vfsSnapshot: VirtualFileSystemContract['Snapshot']
 
 	@state()
 	private nextWindowId: number = 1
 
 	@state()
-	private windows: Array<{
+	public windows: Array<{
 		id: number
 		appId: string
 		title: string
@@ -62,6 +73,7 @@ export class App extends LitElement {
 		zIndex: number
 		openedNodeId: string | null
 		sourceFolderId: string | null
+		startedAt: string
 	}> = []
 
 	private activeDragSession: {
@@ -91,6 +103,7 @@ export class App extends LitElement {
 		(nodeId: string, currentFolderId: string | null) => this.openNode(nodeId, currentFolderId),
 		(appId: string, openedNodeId: string | null, sourceFolderId: string | null) => this.openApp(appId, openedNodeId, sourceFolderId)
 	)
+	public readonly platformRuntimeService = new PlatformRuntimeService(() => this.appRuntimeSnapshotBuilder.buildRuntimeState())
 	public readonly windowContextsByWindowId = new Map<number, PlatformContract['ApplicationContext']>()
 	private readonly onWindowDragListener = (event: MouseEvent): void => this.onWindowDrag(event)
 	private readonly onWindowResizeListener = (event: MouseEvent): void => this.onWindowResize(event)
@@ -157,6 +170,7 @@ export class App extends LitElement {
 		this.vfsSnapshot = snapshot
 		this.ensureWallpaperSelectionMatchesSnapshot(snapshot)
 		this.synchronizeWindowStateWithSnapshot(snapshot)
+		this.platformRuntimeService.recordEvent('internal', 'filesystem', 'Filesystem updated', `VFS now tracks ${String(Object.keys(snapshot.schema.nodesById).length)} items.`)
 	}
 
 	@Spec('Keeps file-manager folder targets and wallpaper fallback valid when the underlying VFS changes beneath the shell.')
@@ -198,12 +212,14 @@ export class App extends LitElement {
 	private applyTheme(theme: string): void {
 		this.activeTheme = theme === 'light' ? 'light' : 'dark'
 		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
+		this.platformRuntimeService.recordEvent('outgoing', 'settings', 'Theme changed', `Shell theme is now ${this.activeTheme}.`)
 	}
 
 	@Spec('Applies one app-requested wallpaper through the shell-managed settings boundary.')
 	private applyWallpaper(wallpaperId: string): void {
 		this.activeWallpaper = wallpaperId
 		AppPreferenceStore.persistPreferences(this.activeTheme, this.activeWallpaper)
+		this.platformRuntimeService.recordEvent('outgoing', 'settings', 'Wallpaper changed', `Shell wallpaper switched to ${wallpaperId}.`)
 	}
 
 	@Spec('Returns true when one wallpaper selection points at either a supported built-in wallpaper or an existing VFS image node.')
@@ -239,6 +255,7 @@ export class App extends LitElement {
 		if (appId === null) {
 			return
 		}
+		this.platformRuntimeService.recordEvent('outgoing', 'launcher', 'Open node request', `Opening ${node.name === '' ? 'Home' : node.name} with ${appId}.`)
 		if (node.kind === 'folder') {
 			this.openApp(appId, node.id, currentFolderId)
 			return
@@ -270,6 +287,7 @@ export class App extends LitElement {
 					zIndex
 				}
 			})
+			this.platformRuntimeService.recordEvent('incoming', 'window', 'Reused running app', `${appDefinition.name} was focused again.`)
 			this.isLauncherOpen = false
 			return
 		}
@@ -290,10 +308,12 @@ export class App extends LitElement {
 			isMaximized: false,
 			zIndex,
 			openedNodeId: resolvedOpenedNodeId,
-			sourceFolderId
+			sourceFolderId,
+			startedAt: new Date().toISOString()
 		}
 		this.windows = [...this.windows, newWindow]
 		this.nextWindowId += 1
+		this.platformRuntimeService.recordEvent('incoming', 'launcher', 'Opened app', `${appDefinition.name} is now running.`)
 		this.isLauncherOpen = false
 	}
 
@@ -318,10 +338,12 @@ export class App extends LitElement {
 				zIndex
 			}
 		})
+		this.platformRuntimeService.recordEvent('internal', 'window', 'Focused window', `${targetWindow.title} moved to the front.`)
 	}
 
 	@Spec('Minimizes a window while keeping it available in the dock.')
 	private minimizeWindow(windowId: number): void {
+		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
 		this.windows = this.windows.map(windowEntry => {
 			if (windowEntry.id !== windowId) {
 				return windowEntry
@@ -331,10 +353,14 @@ export class App extends LitElement {
 				isMinimized: true
 			}
 		})
+		if (targetWindow !== null) {
+			this.platformRuntimeService.recordEvent('internal', 'window', 'Minimized window', `${targetWindow.title} was minimized to the dock.`)
+		}
 	}
 
 	@Spec('Toggles maximized state and keeps the chosen window focused.')
 	private toggleMaximizeWindow(windowId: number): void {
+		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
 		const zIndex = this.getNextZIndex()
 		this.windows = this.windows.map(windowEntry => {
 			if (windowEntry.id !== windowId) {
@@ -347,12 +373,20 @@ export class App extends LitElement {
 				zIndex
 			}
 		})
+		if (targetWindow !== null) {
+			const nextState = targetWindow.isMaximized === true ? 'restored' : 'maximized'
+			this.platformRuntimeService.recordEvent('internal', 'window', 'Toggled window size', `${targetWindow.title} was ${nextState}.`)
+		}
 	}
 
 	@Spec('Closes a window and removes it from the shell state.')
 	private closeWindow(windowId: number): void {
+		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
 		this.windows = this.windows.filter(windowEntry => windowEntry.id !== windowId)
 		this.windowContextsByWindowId.delete(windowId)
+		if (targetWindow !== null) {
+			this.platformRuntimeService.recordEvent('outgoing', 'window', 'Closed window', `${targetWindow.title} stopped running.`)
+		}
 	}
 
 	@Spec('Restores a minimized window and focuses it.')
@@ -375,6 +409,7 @@ export class App extends LitElement {
 				zIndex
 			}
 		})
+		this.platformRuntimeService.recordEvent('incoming', 'window', 'Restored window', `${targetWindow.title} returned from the dock.`)
 	}
 
 	@Spec('Begins dragging a normal window from its title bar and focuses it.')
@@ -493,7 +528,7 @@ export class App extends LitElement {
 	}
 
 	@Spec('Returns the currently focused window identifier when one exists.')
-	private getFocusedWindowId(): number | null {
+	public getFocusedWindowId(): number | null {
 		if (this.windows.length === 0) {
 			return null
 		}
@@ -526,6 +561,7 @@ export class App extends LitElement {
 		zIndex: number
 		openedNodeId: string | null
 		sourceFolderId: string | null
+		startedAt: string
 	} | undefined {
 		return this.windows.find(windowEntry => windowEntry.appId === appId)
 	}
@@ -538,53 +574,6 @@ export class App extends LitElement {
 		return Math.max(...this.windows.map(windowEntry => windowEntry.zIndex)) + 1
 	}
 
-	@Spec('Accepts child-view title updates so file rename, delete, and dirty-state changes appear in the outer shell window header.')
-	public onChildWindowTitleChange(windowId: number, title: string): void {
-		let changedWindowCount = 0
-		const nextWindows = this.windows.map(windowEntry => {
-			if (windowEntry.id !== windowId || windowEntry.title === title) {
-				return windowEntry
-			}
-			changedWindowCount += 1
-			return {
-				...windowEntry,
-				title
-			}
-		})
-		if (changedWindowCount > 0) {
-			this.windows = nextWindows
-		}
-	}
-
-	@Spec('Accepts child-view active file changes so Save As targets become the new source of truth for that app window.')
-	public onChildWindowNodeChange(windowId: number, nodeId: string | null): void {
-		let changedWindowCount = 0
-		const nextWindows = this.windows.map(windowEntry => {
-			if (windowEntry.id !== windowId) {
-				return windowEntry
-			}
-			const node = nodeId === null ? null : this.vfsSnapshot.schema.nodesById[nodeId] ?? null
-			const nextSourceFolderId = node?.parentId ?? windowEntry.sourceFolderId
-			const nextTitle = node?.kind === 'file' ? node.name : windowEntry.title
-			if (
-				windowEntry.openedNodeId === nodeId
-				&& windowEntry.sourceFolderId === nextSourceFolderId
-				&& windowEntry.title === nextTitle
-			) {
-				return windowEntry
-			}
-			changedWindowCount += 1
-			return {
-				...windowEntry,
-				openedNodeId: nodeId,
-				sourceFolderId: nextSourceFolderId,
-				title: nextTitle
-			}
-		})
-		if (changedWindowCount > 0) {
-			this.windows = nextWindows
-		}
-	}
 	@Spec('Renders the full operating shell UI.')
 	render(): TemplateResult {
 		const focusedWindowId = this.getFocusedWindowId()
@@ -608,10 +597,12 @@ export class App extends LitElement {
 						`
 						: null}
 					<div class="windows">
-						${this.windows
-							.filter(windowEntry => windowEntry.isMinimized === false)
-							.sort((leftWindow, rightWindow) => leftWindow.zIndex - rightWindow.zIndex)
-							.map(windowEntry => html`
+						${repeat(
+							this.windows
+								.filter(windowEntry => windowEntry.isMinimized === false)
+								.sort((leftWindow, rightWindow) => leftWindow.zIndex - rightWindow.zIndex),
+							windowEntry => windowEntry.id,
+							windowEntry => html`
 								<section
 									class="window-shell"
 									data-testid="window-${windowEntry.appId}"
@@ -644,7 +635,8 @@ export class App extends LitElement {
 									</div>
 									<button class="window-resize-handle" data-testid=${`resize-${windowEntry.appId}`} aria-label=${`Resize ${windowEntry.title}`} @mousedown=${(event: MouseEvent) => this.beginWindowResize(windowEntry.id, event)}></button>
 								</section>
-							`)}
+							`
+						)}
 					</div>
 					${this.isLauncherOpen
 						? html`

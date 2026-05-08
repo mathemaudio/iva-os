@@ -27,6 +27,9 @@ export class AppWindowPresentation {
 			const fileNode = vfsSnapshot.schema.nodesById[openedNodeId] ?? null
 			return fileNode?.kind === 'file' ? fileNode.name : appDefinition.name
 		}
+		if (appId === 'activity-monitor') {
+			return 'Activity Monitor'
+		}
 		return appDefinition.name
 	}
 
@@ -51,6 +54,9 @@ export class AppWindowPresentation {
 		}
 		if (windowEntry.appId === 'image-viewer') {
 			return html`<iva-image-viewer-view .platformContext=${platformContext}></iva-image-viewer-view>`
+		}
+		if (windowEntry.appId === 'activity-monitor') {
+			return html`<iva-activity-monitor-view .platformContext=${platformContext}></iva-activity-monitor-view>`
 		}
 		return html`
 			<div class="settings-grid">

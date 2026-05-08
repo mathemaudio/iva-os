@@ -2,6 +2,7 @@ import { Spec } from '@shared/lll.lll'
 import { PlatformAppLauncherService } from './PlatformAppLauncherService.lll'
 import { PlatformContextFactory } from './PlatformContextFactory.lll'
 import { PlatformFileSystemService } from './PlatformFileSystemService.lll'
+import { PlatformRuntimeService } from './runtime/PlatformRuntimeService.lll'
 import { PlatformSettingsService } from './PlatformSettingsService.lll'
 import type { PlatformContract } from './PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
@@ -17,7 +18,7 @@ export class PlatformTestContextFactory {
 		sourceFolderId: string | null,
 		onSetTitle?: (title: string) => void,
 		onSetOpenedNodeId?: (nodeId: string | null) => void
-	): { context: PlatformContract['ApplicationContext'], virtualFileSystemService: VirtualFileSystemService, settingsService: PlatformSettingsService } {
+	): { context: PlatformContract['ApplicationContext'], virtualFileSystemService: VirtualFileSystemService, settingsService: PlatformSettingsService, runtimeService: PlatformRuntimeService } {
 		const virtualFileSystemService = new VirtualFileSystemService(storage)
 		virtualFileSystemService.load()
 		return this.createApplicationContextFromVirtualFileSystemService(
@@ -38,7 +39,7 @@ export class PlatformTestContextFactory {
 		sourceFolderId: string | null,
 		onSetTitle?: (title: string) => void,
 		onSetOpenedNodeId?: (nodeId: string | null) => void
-	): { context: PlatformContract['ApplicationContext'], virtualFileSystemService: VirtualFileSystemService, settingsService: PlatformSettingsService } {
+	): { context: PlatformContract['ApplicationContext'], virtualFileSystemService: VirtualFileSystemService, settingsService: PlatformSettingsService, runtimeService: PlatformRuntimeService } {
 		const filesystemService = new PlatformFileSystemService(virtualFileSystemService)
 		const settingsState = {
 			theme: 'dark',
@@ -61,6 +62,20 @@ export class PlatformTestContextFactory {
 			() => undefined,
 			() => undefined
 		)
+		const runtimeService = new PlatformRuntimeService(() => ({
+			runningApps: [{
+				windowId: 1,
+				appId,
+				appName: appId,
+				title: appId,
+				icon: '🧪',
+				isFocused: true,
+				isMinimized: false,
+				startedAt: new Date(Date.now() - 1_000).toISOString(),
+				runningForMs: 0
+			}],
+			vfsSnapshot: virtualFileSystemService.getSnapshot()
+		}))
 		const context = PlatformContextFactory.createApplicationContext(
 			appId,
 			openedNodeId,
@@ -68,6 +83,7 @@ export class PlatformTestContextFactory {
 			filesystemService.toContract(),
 			settingsService.toContract(),
 			launcherService.toContract(),
+			runtimeService.toContract(),
 			(title: string) => {
 				onSetTitle?.(title)
 			},
@@ -75,6 +91,6 @@ export class PlatformTestContextFactory {
 				onSetOpenedNodeId?.(nodeId)
 			}
 		)
-		return { context, virtualFileSystemService, settingsService }
+		return { context, virtualFileSystemService, settingsService, runtimeService }
 	}
 }

@@ -3,6 +3,7 @@ import { AssertFn, Scenario, ScenarioParameter, Spec } from '@shared/lll.lll'
 import { AppWindowPresentation } from './AppWindowPresentation.lll'
 import { PlatformAppLauncherService } from '../platform/PlatformAppLauncherService.lll'
 import { PlatformFileSystemService } from '../platform/PlatformFileSystemService.lll'
+import { PlatformRuntimeService } from '../platform/runtime/PlatformRuntimeService.lll'
 import { PlatformSettingsService } from '../platform/PlatformSettingsService.lll'
 import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
@@ -52,11 +53,13 @@ export class AppWindowPresentationTest {
 			() => undefined,
 			() => undefined
 		)
+		const runtimeService = new PlatformRuntimeService(() => ({ runningApps: [], vfsSnapshot: service.getSnapshot() }))
 		const platformContext = {
 			appId: 'settings',
 			filesystem: filesystemService.toContract(),
 			settings: settingsService.toContract(),
 			launcher: launcherService.toContract(),
+			runtime: runtimeService.toContract(),
 			window: {
 				openedNodeId: null,
 				sourceFolderId: null,

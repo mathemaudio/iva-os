@@ -3,6 +3,7 @@ import { AssertFn, Scenario, ScenarioParameter, Spec } from '@shared/lll.lll'
 import { PlatformContextFactory } from './PlatformContextFactory.lll'
 import { PlatformAppLauncherService } from './PlatformAppLauncherService.lll'
 import { PlatformFileSystemService } from './PlatformFileSystemService.lll'
+import { PlatformRuntimeService } from './runtime/PlatformRuntimeService.lll'
 import { PlatformSettingsService } from './PlatformSettingsService.lll'
 import { VirtualFileSystemService } from '../vfs/VirtualFileSystemService.lll'
 
@@ -22,6 +23,7 @@ export class PlatformContextFactoryTest {
 			() => undefined
 		)
 		const launcherService = new PlatformAppLauncherService(() => undefined, () => undefined)
+		const runtimeService = new PlatformRuntimeService(() => ({ runningApps: [], vfsSnapshot: virtualFileSystemService.getSnapshot() }))
 		let title = ''
 		let openedNodeId: string | null = null
 		const context = PlatformContextFactory.createApplicationContext(
@@ -31,6 +33,7 @@ export class PlatformContextFactoryTest {
 			filesystemService.toContract(),
 			settingsService.toContract(),
 			launcherService.toContract(),
+			runtimeService.toContract(),
 			(nextTitle: string) => {
 				title = nextTitle
 			},

@@ -13,6 +13,7 @@ export class AppWindowCatalog {
 			{ id: 'file-manager', name: 'File Manager', icon: '🗂️', description: 'Browse the shared virtual filesystem.', isPinnedToDock: true },
 			{ id: 'text-editor', name: 'Text Editor', icon: '📝', description: 'Create and edit text files from the shared VFS.', isPinnedToDock: true },
 			{ id: 'image-viewer', name: 'Image Viewer', icon: '🖼️', description: 'Open image files from the shared VFS.', isPinnedToDock: false },
+			{ id: 'activity-monitor', name: 'Activity Monitor', icon: '📈', description: 'Inspect running apps, signals, and runtime memory usage.', isPinnedToDock: true },
 			{ id: 'settings', name: 'Settings', icon: '⚙️', description: 'Adjust theme and wallpaper preferences.', isPinnedToDock: true },
 			{ id: 'app-studio', name: 'App Studio', icon: '🧪', description: 'Build apps soon.', isPinnedToDock: false }
 		]
@@ -22,6 +23,9 @@ export class AppWindowCatalog {
 	public getWindowHeight(appId: string): number {
 			if (appId === 'settings') {
 				return 430
+			}
+			if (appId === 'activity-monitor') {
+				return 540
 			}
 			if (appId === 'file-manager') {
 				return 520
@@ -37,6 +41,9 @@ export class AppWindowCatalog {
 	public getWindowWidth(appId: string): number {
 			if (appId === 'settings') {
 				return 520
+			}
+			if (appId === 'activity-monitor') {
+				return 760
 			}
 			if (appId === 'file-manager') {
 				return 760

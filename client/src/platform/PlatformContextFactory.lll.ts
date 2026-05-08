@@ -11,6 +11,7 @@ export class PlatformContextFactory {
 		filesystem: PlatformContract['FileSystemService'],
 		settings: PlatformContract['SettingsService'],
 		launcher: PlatformContract['LauncherService'],
+		runtime: PlatformContract['RuntimeService'],
 		onTitleChange: (title: string) => void,
 		onOpenedNodeIdChange: (nodeId: string | null) => void
 	): PlatformContract['ApplicationContext'] {
@@ -19,6 +20,7 @@ export class PlatformContextFactory {
 			filesystem,
 			settings,
 			launcher,
+			runtime,
 			window: {
 				openedNodeId,
 				sourceFolderId,
