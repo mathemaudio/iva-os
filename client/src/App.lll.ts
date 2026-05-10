@@ -614,6 +614,11 @@ export class App extends LitElement {
 									@click=${() => this.focusWindow(windowEntry.id)}
 								>
 									<div class="window-header" data-testid="window-header-${windowEntry.appId}" @mousedown=${(event: MouseEvent) => this.beginWindowDrag(windowEntry.id, event)}>
+										<div class="window-controls window-controls-leading">
+											<button data-role="close" data-testid="close-${windowEntry.appId}" aria-label=${`Close ${windowEntry.title}`} @click=${(event: Event) => { event.stopPropagation(); this.closeWindow(windowEntry.id) }}>Close</button>
+											<button data-role="minimize" data-testid="minimize-${windowEntry.appId}" aria-label=${`Minimize ${windowEntry.title}`} @click=${(event: Event) => { event.stopPropagation(); this.minimizeWindow(windowEntry.id) }}>Minimize</button>
+											<button data-role="maximize" data-testid="maximize-${windowEntry.appId}" aria-label=${`${windowEntry.isMaximized ? 'Restore' : 'Maximize'} ${windowEntry.title}`} @click=${(event: Event) => { event.stopPropagation(); this.toggleMaximizeWindow(windowEntry.id) }}>${windowEntry.isMaximized ? 'Restore' : 'Maximize'}</button>
+										</div>
 										<div class="window-title">
 											<span>${windowEntry.icon}</span>
 											<div>
@@ -621,11 +626,7 @@ export class App extends LitElement {
 												<div class="window-subtitle">${windowEntry.description}</div>
 											</div>
 										</div>
-										<div class="window-controls">
-											<button data-testid="minimize-${windowEntry.appId}" @click=${(event: Event) => { event.stopPropagation(); this.minimizeWindow(windowEntry.id) }}>—</button>
-											<button data-testid="maximize-${windowEntry.appId}" @click=${(event: Event) => { event.stopPropagation(); this.toggleMaximizeWindow(windowEntry.id) }}>${windowEntry.isMaximized ? '🗗' : '🗖'}</button>
-											<button data-testid="close-${windowEntry.appId}" @click=${(event: Event) => { event.stopPropagation(); this.closeWindow(windowEntry.id) }}>✕</button>
-										</div>
+										<div class="window-controls window-controls-trailing" aria-hidden="true"></div>
 									</div>
 									<div class="window-body">
 										${AppWindowPresentation.renderWindowContent(

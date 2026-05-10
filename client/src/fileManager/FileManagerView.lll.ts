@@ -109,8 +109,8 @@ export class FileManagerView extends LitElement {
 						<button data-testid="file-manager-action-rename" ?disabled=${selectedNode === null} @click=${() => this.beginRename()}>Rename</button>
 						<button data-testid="file-manager-action-move" ?disabled=${selectedNode === null} @click=${() => this.beginMove()}>Move</button>
 						<button data-testid="file-manager-action-delete" ?disabled=${selectedNode === null} @click=${() => this.beginDelete()}>Delete</button>
-						<button data-testid="file-manager-action-toggle-view" @click=${() => this.toggleViewMode()}>${this.viewMode === 'grid' ? 'Switch to List' : 'Switch to Grid'}</button>
-						<button data-testid="file-manager-action-upload" @click=${() => this.triggerUpload()}>Upload</button>
+						<button data-testid="file-manager-action-toggle-view" @click=${() => this.toggleViewMode()}>${this.viewMode === 'grid' ? 'List View' : 'Icon View'}</button>
+						<button data-testid="file-manager-action-upload" @click=${() => this.triggerUpload()}>Import</button>
 						<input
 							id="file-manager-upload-input"
 							class="sr-only"
@@ -125,7 +125,7 @@ export class FileManagerView extends LitElement {
 						<div class="current-folder" data-testid="file-manager-current-folder">${currentFolderName}</div>
 						<div class="breadcrumbs" data-testid="file-manager-breadcrumbs">
 							${breadcrumbs.map((node, index) => html`
-								${index === 0 ? null : html`<span>/</span>`}
+								${index === 0 ? null : html`<span>›</span>`}
 								<button
 									class="breadcrumb-button"
 									data-testid=${`file-manager-breadcrumb-${node.name === '' ? 'Home' : node.name}`}
@@ -156,7 +156,7 @@ export class FileManagerView extends LitElement {
 		return html`
 			<div class="empty-state" data-testid="file-manager-empty-state">
 				<strong>This folder is empty.</strong>
-				<span>Create a folder, add a text file, or upload content here.</span>
+				<span>Create a folder, add a text file, or import content here.</span>
 			</div>
 		`
 	}
@@ -168,7 +168,7 @@ export class FileManagerView extends LitElement {
 		}
 		return html`
 			<div class="list-view" data-testid="file-manager-list-view">
-				<div class="list-header"><span>Name</span><span>Type</span><span>Modified</span><span>Size</span></div>
+				<div class="list-header"><span>Name</span><span>Kind</span><span>Date Modified</span><span>Size</span></div>
 				${nodes.map(node => this.renderListNode(node))}
 			</div>
 		`

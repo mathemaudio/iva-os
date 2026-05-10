@@ -16,29 +16,36 @@ export class ActivityMonitorView extends LitElement {
 
 		.activity-monitor {
 			display: grid;
-			grid-template-rows: auto auto 1fr;
-			gap: calc(14px * var(--shell-density-scale, 1));
+			grid-template-rows: auto auto auto 1fr;
+			gap: calc(12px * var(--shell-density-scale, 1));
 			height: 100%;
 			min-height: 0;
+			padding: calc(16px * var(--shell-density-scale, 1));
+			background: linear-gradient(180deg, rgba(12, 17, 28, 0.92) 0%, rgba(9, 13, 21, 0.98) 100%);
+		}
+
+		:host-context(.shell[data-theme='light']) .activity-monitor {
+			background: linear-gradient(180deg, rgba(249, 251, 255, 0.98) 0%, rgba(236, 241, 248, 0.98) 100%);
 		}
 
 		.hero,
+		.summary-strip,
 		.panel,
 		.empty-state,
 		.card,
 		.event-row,
-		.summary-pill {
-			border-radius: calc(16px * var(--shell-density-scale, 1));
-			background: rgba(255, 255, 255, 0.08);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+		.metric-card {
+			border-radius: calc(12px * var(--shell-density-scale, 1));
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			background: color-mix(in srgb, var(--shell-control, rgba(255, 255, 255, 0.08)) 88%, transparent);
 		}
 
 		.hero {
 			display: flex;
 			justify-content: space-between;
 			align-items: flex-start;
-			gap: calc(12px * var(--shell-density-scale, 1));
-			padding: calc(16px * var(--shell-density-scale, 1));
+			gap: calc(14px * var(--shell-density-scale, 1));
+			padding: calc(14px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1));
 		}
 
 		.hero-copy,
@@ -47,47 +54,74 @@ export class ActivityMonitorView extends LitElement {
 		.card,
 		.card-copy,
 		.event-copy,
-		.metric-card {
+		.metric-card,
+		.summary-stat {
 			display: grid;
-			gap: calc(8px * var(--shell-density-scale, 1));
+			gap: calc(6px * var(--shell-density-scale, 1));
 		}
 
-		.summary-pill {
-			display: inline-flex;
+		.hero-title-row,
+		.panel-title-row,
+		.app-row,
+		.event-header,
+		.metric-value-row,
+		.summary-strip {
+			display: flex;
+			justify-content: space-between;
 			align-items: center;
-			padding: calc(8px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
-			font-size: 0.9rem;
+			gap: calc(12px * var(--shell-density-scale, 1));
 		}
 
+		.summary-strip {
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(14px * var(--shell-density-scale, 1));
+			flex-wrap: wrap;
+		}
+
+		.summary-stat {
+			min-width: calc(120px * var(--shell-density-scale, 1));
+		}
+
+		.summary-label,
 		.hero-note,
 		.event-detail,
 		.metric-note,
-		.app-meta {
-			color: rgba(226, 232, 240, 0.82);
+		.app-meta,
+		.panel-note {
+			color: var(--shell-muted-text, rgba(226, 232, 240, 0.82));
+		}
+
+		.summary-value {
+			font-size: calc(15px * var(--shell-density-scale, 1));
+			font-weight: 700;
 		}
 
 		.tab-strip {
 			grid-auto-flow: column;
 			grid-auto-columns: 1fr;
+			padding: calc(4px * var(--shell-density-scale, 1));
+			background: color-mix(in srgb, var(--shell-control, rgba(255, 255, 255, 0.08)) 72%, transparent);
+			border-radius: calc(12px * var(--shell-density-scale, 1));
+			border: 1px solid rgba(255, 255, 255, 0.08);
 		}
 
 		.tab-button {
 			font: inherit;
 			color: inherit;
-			padding: calc(12px * var(--shell-density-scale, 1));
-			border-radius: calc(14px * var(--shell-density-scale, 1));
-			border: 1px solid rgba(255, 255, 255, 0.12);
-			background: rgba(255, 255, 255, 0.04);
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(9px * var(--shell-density-scale, 1));
+			border: 1px solid transparent;
+			background: transparent;
 			cursor: pointer;
 		}
 
 		.tab-button[data-active='true'] {
-			background: rgba(99, 102, 241, 0.24);
-			border-color: rgba(129, 140, 248, 0.5);
+			background: linear-gradient(180deg, rgba(108, 149, 255, 0.26) 0%, rgba(76, 120, 224, 0.3) 100%);
+			border-color: rgba(132, 169, 255, 0.34);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 		}
 
 		.panel {
-			padding: calc(16px * var(--shell-density-scale, 1));
+			padding: calc(14px * var(--shell-density-scale, 1));
 			overflow: auto;
 			min-height: 0;
 		}
@@ -96,26 +130,18 @@ export class ActivityMonitorView extends LitElement {
 		.event-list,
 		.metric-grid {
 			display: grid;
-			gap: calc(12px * var(--shell-density-scale, 1));
+			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 
 		.metric-grid {
-			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 		}
 
 		.card,
 		.event-row,
-		.metric-card {
-			padding: calc(14px * var(--shell-density-scale, 1));
-		}
-
-		.app-row,
-		.event-header,
-		.metric-value-row {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			gap: calc(12px * var(--shell-density-scale, 1));
+		.metric-card,
+		.empty-state {
+			padding: calc(12px * var(--shell-density-scale, 1));
 		}
 
 		.app-title-row,
@@ -130,41 +156,45 @@ export class ActivityMonitorView extends LitElement {
 			display: inline-flex;
 			align-items: center;
 			gap: calc(6px * var(--shell-density-scale, 1));
-			padding: calc(4px * var(--shell-density-scale, 1)) calc(10px * var(--shell-density-scale, 1));
+			padding: calc(4px * var(--shell-density-scale, 1)) calc(8px * var(--shell-density-scale, 1));
 			border-radius: 999px;
-			font-size: 0.78rem;
+			font-size: 0.76rem;
 			background: rgba(255, 255, 255, 0.08);
 			border: 1px solid rgba(255, 255, 255, 0.12);
 		}
 
 		.badge[data-kind='focused'] {
-			background: rgba(34, 197, 94, 0.18);
-			border-color: rgba(74, 222, 128, 0.34);
+			background: rgba(52, 187, 101, 0.18);
+			border-color: rgba(88, 217, 133, 0.28);
 		}
 
 		.badge[data-kind='minimized'] {
-			background: rgba(245, 158, 11, 0.18);
-			border-color: rgba(251, 191, 36, 0.34);
+			background: rgba(230, 176, 76, 0.18);
+			border-color: rgba(248, 198, 97, 0.3);
 		}
 
 		.badge[data-kind='incoming'] {
-			background: rgba(59, 130, 246, 0.18);
-			border-color: rgba(96, 165, 250, 0.34);
+			background: rgba(70, 137, 246, 0.18);
+			border-color: rgba(102, 163, 255, 0.3);
 		}
 
 		.badge[data-kind='outgoing'] {
-			background: rgba(168, 85, 247, 0.18);
-			border-color: rgba(192, 132, 252, 0.34);
+			background: rgba(165, 104, 244, 0.18);
+			border-color: rgba(191, 138, 255, 0.28);
 		}
 
 		.badge[data-kind='internal'] {
-			background: rgba(148, 163, 184, 0.18);
-			border-color: rgba(203, 213, 225, 0.34);
+			background: rgba(132, 145, 168, 0.18);
+			border-color: rgba(181, 193, 216, 0.28);
 		}
 
 		.metric-value {
-			font-size: 1.1rem;
-			font-weight: 600;
+			font-size: 1.08rem;
+			font-weight: 700;
+		}
+
+		.card-runtime {
+			text-align: right;
 		}
 
 		strong,
@@ -216,19 +246,44 @@ export class ActivityMonitorView extends LitElement {
 	@Spec('Renders the full activity monitor shell with tab navigation and the active monitor panel.')
 	render(): TemplateResult {
 		if (this.runtimeSnapshot === null) {
-			return html`<div class="summary-pill">Preparing activity snapshot…</div>`
+			return html`<div class="empty-state">Preparing activity snapshot…</div>`
 		}
+		const stats = this.runtimeSnapshot.stats
 		return html`
 			<div class="activity-monitor" data-testid="activity-monitor-view">
 				<header class="hero">
 					<div class="hero-copy">
-						<strong>Activity Monitor</strong>
-						<span class="hero-note">Watch which apps are running, review recent signals and events, and inspect browser-visible runtime usage.</span>
+						<div class="hero-title-row">
+							<strong>Activity Monitor</strong>
+							<span class="badge">Live</span>
+						</div>
+						<span class="hero-note">Review running apps, recent runtime events, and browser-visible memory usage in a desktop-style monitor.</span>
 					</div>
-					<div class="summary-pill" data-testid="activity-monitor-running-count">${String(this.runtimeSnapshot.runningApps.length)} running apps</div>
+					<div class="card-runtime">
+						<strong>${String(this.runtimeSnapshot.runningApps.length)} apps</strong>
+						<span class="app-meta">Running now</span>
+					</div>
 				</header>
+				<div class="summary-strip">
+					<div class="summary-stat">
+						<span class="summary-label">Windows</span>
+						<span class="summary-value">${String(stats.windowCount)}</span>
+					</div>
+					<div class="summary-stat">
+						<span class="summary-label">Visible</span>
+						<span class="summary-value">${String(stats.visibleWindowCount)}</span>
+					</div>
+					<div class="summary-stat">
+						<span class="summary-label">Memory</span>
+						<span class="summary-value">${this.formatBytes(stats.memoryUsedBytes)}</span>
+					</div>
+					<div class="summary-stat">
+						<span class="summary-label">Session</span>
+						<span class="summary-value">${this.formatDuration(stats.uptimeMs)}</span>
+					</div>
+				</div>
 				<nav class="tab-strip" data-testid="activity-monitor-tabs">
-					<button class="tab-button" data-testid="activity-monitor-tab-running-apps" data-active=${String(this.selectedTab === 'running-apps')} @click=${() => this.selectTab('running-apps')}>Running Apps</button>
+					<button class="tab-button" data-testid="activity-monitor-tab-running-apps" data-active=${String(this.selectedTab === 'running-apps')} @click=${() => this.selectTab('running-apps')}>Processes</button>
 					<button class="tab-button" data-testid="activity-monitor-tab-signals-events" data-active=${String(this.selectedTab === 'signals-events')} @click=${() => this.selectTab('signals-events')}>Signals & Events</button>
 					<button class="tab-button" data-testid="activity-monitor-tab-runtime-stats" data-active=${String(this.selectedTab === 'runtime-stats')} @click=${() => this.selectTab('runtime-stats')}>Runtime Stats</button>
 				</nav>
@@ -255,6 +310,10 @@ export class ActivityMonitorView extends LitElement {
 		}
 		return html`
 			<section class="panel" data-testid="activity-monitor-running-apps-panel">
+				<div class="panel-title-row">
+					<strong>Running apps</strong>
+					<span class="panel-note">Focused and minimized states update live.</span>
+				</div>
 				${this.runtimeSnapshot.runningApps.length === 0
 					? html`<div class="empty-state" data-testid="activity-monitor-empty-running-apps">No app windows are running right now.</div>`
 					: html`
@@ -271,7 +330,7 @@ export class ActivityMonitorView extends LitElement {
 											<span class="app-meta">${app.title}</span>
 											<span class="app-meta">Started ${this.formatClock(app.startedAt)}</span>
 										</div>
-										<div class="card-copy">
+										<div class="card-copy card-runtime">
 											<strong>${this.formatDuration(app.runningForMs)}</strong>
 											<span class="app-meta">Runtime</span>
 										</div>
@@ -291,6 +350,10 @@ export class ActivityMonitorView extends LitElement {
 		}
 		return html`
 			<section class="panel" data-testid="activity-monitor-signals-events-panel">
+				<div class="panel-title-row">
+					<strong>Signals & events</strong>
+					<span class="panel-note">Recent launcher, window, filesystem, and settings activity.</span>
+				</div>
 				${this.runtimeSnapshot.events.length === 0
 					? html`<div class="empty-state" data-testid="activity-monitor-empty-events">No runtime signals have been recorded yet.</div>`
 					: html`
@@ -324,6 +387,10 @@ export class ActivityMonitorView extends LitElement {
 		const stats = this.runtimeSnapshot.stats
 		return html`
 			<section class="panel" data-testid="activity-monitor-runtime-stats-panel">
+				<div class="panel-title-row">
+					<strong>Runtime statistics</strong>
+					<span class="panel-note">Browser-visible figures only.</span>
+				</div>
 				<div class="metric-grid">
 					${this.renderMetricCard('activity-monitor-stat-session-uptime', 'Session uptime', this.formatDuration(stats.uptimeMs), 'How long this browser-hosted shell has been running.')}
 					${this.renderMetricCard('activity-monitor-stat-memory', 'JS heap used', this.formatBytes(stats.memoryUsedBytes), 'Visible only when the browser exposes memory figures to JavaScript.')}

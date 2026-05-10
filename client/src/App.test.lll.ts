@@ -107,6 +107,46 @@ export class AppTest {
 		return { movedLeft, movedTop }
 	}
 
+	@Scenario('allows dragging a window flush to the desktop edge')
+	static async allowsDraggingWindowToDesktopEdge(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ movedTop: number, expectedMaxTop: number }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before opening a second draggable window')
+		this.click(app, '[data-testid="launcher-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected text editor window to open before lower-edge dragging')
+
+		const desktopSurface = this.find(app, '[data-testid="desktop-surface"]')
+		const windowsRegion = this.find(app, '.windows')
+		const header = this.find(app, '[data-testid="window-header-text-editor"]')
+		const windowElement = this.find(app, '[data-testid="window-text-editor"]')
+		assert(desktopSurface !== null, 'Expected the desktop surface to exist for lower-edge dragging')
+		assert(windowsRegion !== null, 'Expected the windows region to exist for lower-edge dragging')
+		assert(header !== null, 'Expected the text editor header to exist for lower-edge dragging')
+		assert(windowElement !== null, 'Expected the text editor window to exist for lower-edge dragging')
+
+		windowsRegion.getBoundingClientRect = (): DOMRect => new DOMRect(0, 0, 900, 600)
+		const windowHeight = this.readPixelSize(windowElement, 'height')
+		const expectedMaxTop = 600 - windowHeight
+		const headerBounds = header.getBoundingClientRect()
+		const startClientX = headerBounds.left + headerBounds.width / 2
+		const startClientY = headerBounds.top + headerBounds.height / 2
+		header.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: startClientX, clientY: startClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: startClientX, clientY: startClientY + 4000, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: startClientX, clientY: startClientY + 4000 }))
+		await app.updateComplete
+
+		const movedWindow = this.find(app, '[data-testid="window-text-editor"]')
+		assert(movedWindow !== null, 'Expected the text editor window to remain visible after lower-edge dragging')
+		const movedTop = this.readPixelOffset(movedWindow, 'top')
+		assert(movedTop === expectedMaxTop, `Expected the dragged window to reach the measured desktop edge. movedTop=${movedTop}, expectedMaxTop=${expectedMaxTop}`)
+		return { movedTop, expectedMaxTop }
+	}
+
 	@Scenario('resizes a normal window from its lower-right handle')
 	static async resizesWindowFromHandle(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ resizedWidth: number, resizedHeight: number }> {
 		const assert: AssertFn = scenario.assert

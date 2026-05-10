@@ -22,19 +22,20 @@ export class TextEditorView extends LitElement {
 
 		.editor {
 			display: grid;
-			grid-template-rows: auto auto 1fr;
-			gap: calc(12px * var(--shell-density-scale, 1));
+			grid-template-rows: auto auto auto 1fr;
 			height: 100%;
 			min-height: 0;
+			background: linear-gradient(180deg, rgba(16, 21, 33, 0.98) 0%, rgba(8, 11, 19, 1) 100%);
+		}
+
+		:host-context(.shell[data-theme='light']) .editor {
+			background: linear-gradient(180deg, rgba(246, 249, 253, 0.98) 0%, rgba(232, 238, 246, 0.98) 100%);
 		}
 
 		.toolbar,
 		.status,
 		.dialog {
-			padding: calc(12px * var(--shell-density-scale, 1));
-			border-radius: calc(14px * var(--shell-density-scale, 1));
-			background: rgba(255, 255, 255, 0.08);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 		}
 
 		.toolbar {
@@ -43,6 +44,42 @@ export class TextEditorView extends LitElement {
 			gap: calc(10px * var(--shell-density-scale, 1));
 			align-items: center;
 			justify-content: space-between;
+			padding: calc(12px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1));
+			background: linear-gradient(180deg, rgba(35, 41, 58, 0.86) 0%, rgba(19, 24, 36, 0.9) 100%);
+		}
+
+		:host-context(.shell[data-theme='light']) .toolbar {
+			background: linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(236, 241, 248, 0.98) 100%);
+			border-bottom-color: rgba(123, 137, 168, 0.18);
+		}
+
+		.toolbar-copy,
+		.status-copy,
+		.dialog,
+		.form-row,
+		.editor-surface,
+		.footer-strip {
+			display: grid;
+			gap: calc(6px * var(--shell-density-scale, 1));
+		}
+
+		.toolbar-copy {
+			min-width: 0;
+		}
+
+		.toolbar-copy strong {
+			font-size: calc(17px * var(--shell-density-scale, 1));
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.toolbar-subtitle,
+		.status span,
+		.footer-strip,
+		label,
+		p {
+			color: var(--shell-muted-text, rgba(226, 232, 240, 0.82));
 		}
 
 		.toolbar-actions {
@@ -61,15 +98,22 @@ export class TextEditorView extends LitElement {
 		button,
 		select,
 		input {
-			border-radius: calc(12px * var(--shell-density-scale, 1));
+			border-radius: calc(10px * var(--shell-density-scale, 1));
 			border: 1px solid rgba(255, 255, 255, 0.14);
-			background: rgba(255, 255, 255, 0.08);
+			background: color-mix(in srgb, var(--shell-control, rgba(255, 255, 255, 0.08)) 90%, transparent);
 			color: inherit;
 		}
 
 		button {
-			padding: calc(9px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
+			padding: calc(8px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			cursor: pointer;
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+		}
+
+		:host-context(.shell[data-theme='light']) button {
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(234, 239, 247, 0.96) 100%);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
 		}
 
 		select,
@@ -77,18 +121,48 @@ export class TextEditorView extends LitElement {
 			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 		}
 
+		.status {
+			display: grid;
+			gap: calc(4px * var(--shell-density-scale, 1));
+			padding: calc(10px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1));
+			background: color-mix(in srgb, var(--shell-control, rgba(255, 255, 255, 0.08)) 74%, transparent);
+		}
+
+		.status[data-kind='error'] {
+			background: var(--shell-error, rgba(248, 113, 113, 0.14));
+			color: var(--shell-error-text, rgb(254, 226, 226));
+		}
+
+		.editor-surface {
+			min-height: 0;
+			padding: calc(16px * var(--shell-density-scale, 1));
+		}
+
 		textarea {
 			width: 100%;
 			height: 100%;
 			min-height: calc(220px * var(--shell-density-scale, 1));
-			padding: calc(14px * var(--shell-density-scale, 1));
-			border-radius: calc(16px * var(--shell-density-scale, 1));
-			border: 1px solid rgba(255, 255, 255, 0.14);
-			background: rgba(2, 6, 23, 0.35);
-			color: inherit;
+			padding: calc(18px * var(--shell-density-scale, 1)) calc(20px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
+			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: rgba(6, 10, 18, 0.92);
+			color: rgb(233, 237, 244);
 			resize: none;
+			font-family: 'SFMono-Regular', 'Cascadia Code', 'Fira Code', 'Consolas', 'Menlo', monospace;
+			font-size: calc(13.5px * var(--shell-density-scale, 1));
+			line-height: 1.55;
+			tab-size: 4;
+			caret-color: rgb(112, 165, 255);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 			scrollbar-color: var(--text-editor-scrollbar-thumb) var(--text-editor-scrollbar-track);
 			scrollbar-width: thin;
+		}
+
+		:host-context(.shell[data-theme='light']) textarea {
+			background: rgba(255, 255, 255, 0.96);
+			color: rgb(25, 30, 42);
+			border-color: rgba(123, 137, 168, 0.2);
+			box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
 		}
 
 		textarea::-webkit-scrollbar {
@@ -116,9 +190,48 @@ export class TextEditorView extends LitElement {
 			background: var(--text-editor-scrollbar-corner);
 		}
 
-		.status {
+		.footer-strip {
+			grid-auto-flow: column;
+			grid-auto-columns: max-content;
+			justify-content: space-between;
+			align-items: center;
+			padding: calc(8px * var(--shell-density-scale, 1)) calc(16px * var(--shell-density-scale, 1));
+			border-top: 1px solid rgba(255, 255, 255, 0.06);
+			font-size: calc(12px * var(--shell-density-scale, 1));
+		}
+
+		.dialog-scrim {
+			position: absolute;
+			inset: 0;
 			display: grid;
-			gap: calc(6px * var(--shell-density-scale, 1));
+			place-items: center;
+			background: rgba(10, 15, 24, 0.58);
+			backdrop-filter: blur(8px);
+			padding: calc(18px * var(--shell-density-scale, 1));
+		}
+
+		.dialog {
+			width: min(calc(440px * var(--shell-density-scale, 1)), calc(100% - calc(24px * var(--shell-density-scale, 1))));
+			padding: calc(18px * var(--shell-density-scale, 1));
+			border-radius: calc(14px * var(--shell-density-scale, 1));
+			background: linear-gradient(180deg, rgba(34, 40, 56, 0.98) 0%, rgba(18, 23, 34, 0.98) 100%);
+			border: 1px solid rgba(255, 255, 255, 0.14);
+			box-shadow: 0 calc(22px * var(--shell-density-scale, 1)) calc(60px * var(--shell-density-scale, 1)) rgba(0, 0, 0, 0.34);
+		}
+
+		:host-context(.shell[data-theme='light']) .dialog {
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(238, 243, 250, 0.99) 100%);
+			border-color: rgba(123, 137, 168, 0.22);
+		}
+
+		.form-row {
+			gap: calc(8px * var(--shell-density-scale, 1));
+		}
+
+		.dialog-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 
 		.status strong,
@@ -127,31 +240,6 @@ export class TextEditorView extends LitElement {
 		p,
 		h3 {
 			margin: 0;
-		}
-
-		.dialog-scrim {
-			position: absolute;
-			inset: 0;
-			display: grid;
-			place-items: center;
-			background: rgba(15, 23, 42, 0.5);
-		}
-
-		.dialog {
-			width: min(calc(420px * var(--shell-density-scale, 1)), calc(100% - calc(24px * var(--shell-density-scale, 1))));
-			display: grid;
-			gap: calc(12px * var(--shell-density-scale, 1));
-		}
-
-		.form-row {
-			display: grid;
-			gap: calc(8px * var(--shell-density-scale, 1));
-		}
-
-		.dialog-actions {
-			display: flex;
-			justify-content: flex-end;
-			gap: calc(10px * var(--shell-density-scale, 1));
 		}
 	`
 
@@ -195,22 +283,28 @@ export class TextEditorView extends LitElement {
 		return html`
 			<div class="editor" data-testid="text-editor-view">
 				<div class="toolbar">
-					<div>
+					<div class="toolbar-copy">
 						<strong data-testid="text-editor-file-label">${this.lastKnownFileName ?? 'Untitled.txt'}</strong>
-						<span>${this.isDirty === true ? 'Unsaved changes' : activeFileNode === null ? 'Ready to save' : 'Saved to virtual filesystem'}</span>
+						<span class="toolbar-subtitle">${activeFileNode?.mimeType ?? 'Plain text document'}</span>
 					</div>
 					<div class="toolbar-actions">
 						<button data-testid="text-editor-save" @click=${() => this.saveCurrentDocument()}>Save</button>
-						<button data-testid="text-editor-save-as" @click=${() => this.openSaveAsDialog()}>Save As</button>
+						<button data-testid="text-editor-save-as" @click=${() => this.openSaveAsDialog()}>Save As…</button>
 					</div>
 				</div>
-				${this.errorMessage === null ? null : html`
-					<div class="status" data-testid="text-editor-error">
-						<strong>Recoverable file issue</strong>
-						<span>${this.errorMessage}</span>
-					</div>
-				`}
-				<textarea data-testid="text-editor-textarea" .value=${this.editorValue} @input=${(event: Event) => this.onEditorInput(event)} spellcheck="false"></textarea>
+				<div class="status" data-kind=${this.errorMessage === null ? 'info' : 'error'}>
+					<strong>${this.errorMessage === null ? (this.isDirty === true ? 'Edited locally' : activeFileNode === null ? 'Ready to save' : 'Saved to virtual filesystem') : 'Recoverable file issue'}</strong>
+					${this.errorMessage === null
+						? html`<span>${this.isDirty === true ? 'Unsaved changes are currently in memory.' : 'This document is synced with the shared virtual filesystem.'}</span>`
+						: html`<span data-testid="text-editor-error">${this.errorMessage}</span>`}
+				</div>
+				<div class="editor-surface">
+					<textarea data-testid="text-editor-textarea" .value=${this.editorValue} @input=${(event: Event) => this.onEditorInput(event)} spellcheck="false"></textarea>
+				</div>
+				<div class="footer-strip">
+					<span>${this.isDirty === true ? 'Modified' : 'Clean'}</span>
+					<span>${String(this.editorValue.length)} characters</span>
+				</div>
 				${this.isSaveAsOpen === false ? null : this.renderSaveAsDialog()}
 			</div>
 		`
