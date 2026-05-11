@@ -30,24 +30,24 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "lllts",
-      version: "0.1.35",
-      description: "LLLTS: A self-testing, LLM-friendly language built on TypeScript",
+      version: "0.1.36",
+      description: "EvidyTS: the stricter TypeScript compiler/dialect behind Evidype",
       license: "GPL-3.0-or-later",
       main: "dist/LLLTS.bundle.cjs",
       bin: {
-        lllts: "./bin/lllts",
-        "lllts-server": "./bin/lllts-server"
+        evidyts: "./bin/evidyts",
+        lllts: "./bin/lllts"
       },
       type: "commonjs",
       scripts: {
         watch: "node scripts/watch.mjs",
         "watch:overlay-runtime": "node scripts/build-overlay-runtime.mjs --watch",
-        "lll-check": "tsc && ./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noEmit",
-        "lll-check-no-tests": "tsc && ./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
-        "lll-check-verbose": "tsc && ./bin/lllts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
-        "lll-example-check-quick": "tsc && ./bin/lllts --project tsconfig.json --entry src/rules/testing/examples/MathObject.lll.ts",
-        "lll-example-bad-many-functions": "tsc && ./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
-        "lll-example-bad-rogue-top-level": "tsc && ./bin/lllts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
+        "lll-check": "tsc && ./bin/evidyts --project tsconfig.json --entry src/LLLTS.lll.ts --noEmit",
+        "lll-check-no-tests": "tsc && ./bin/evidyts --project tsconfig.json --entry src/LLLTS.lll.ts --noTests",
+        "lll-check-verbose": "tsc && ./bin/evidyts --project tsconfig.json --entry src/LLLTS.lll.ts --verbose",
+        "lll-example-check-quick": "tsc && ./bin/evidyts --project tsconfig.json --entry src/rules/testing/examples/MathObject.lll.ts",
+        "lll-example-bad-many-functions": "tsc && ./bin/evidyts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/ClassUsingManyFunctions.ts",
+        "lll-example-bad-rogue-top-level": "tsc && ./bin/evidyts --project tsconfig.json --entry src/examples/intentionallyBadExampleTests/RogueTopLevelViolationsEntry.ts",
         "build:typescript": "tsc",
         "typecheck:overlay-runtime": "tsc -p tsconfig.overlay-runtime.json --noEmit",
         "build:overlay-runtime": "node scripts/build-overlay-runtime.mjs",
@@ -57,10 +57,13 @@ var require_package = __commonJS({
         "playwright-setup": "pnpm exec playwright install chromium",
         "playwright-list": "pnpm exec playwright install --list",
         i: "pnpm i",
+        "install-evidyts-global": "pnpm link --global",
+        "uninstall-evidyts-global": "pnpm remove --global lllts",
         "install-lllts-global": "pnpm link --global",
         "uninstall-lllts-global": "pnpm remove --global lllts"
       },
       keywords: [
+        "evidyts",
         "typescript",
         "compiler",
         "testing",
@@ -831,7 +834,7 @@ var require_BreadthRuleLimits = __commonJS({
       __metadata2("design:returntype", Number)
     ], BreadthRuleLimits, "parsePositiveInteger", null);
     exports2.BreadthRuleLimits = BreadthRuleLimits = BreadthRuleLimits_1 = __decorate2([
-      (0, lll_lll_12.Spec)("Loads the single shared configuration for LLLTS breadth and size limits.")
+      (0, lll_lll_12.Spec)("Loads the single shared configuration for EvidyTS breadth and size limits.")
     ], BreadthRuleLimits);
   }
 });
@@ -898,7 +901,7 @@ var require_ResultReporter_lll = __commonJS({
       }
       projectRoot;
       static RULE_DESCRIPTIONS = {
-        "no-export": "Wrong number of exports. Only if it's impossible to follow LLLTS, for example: 1. you need to support old system, 2. you export decorators - only in those two cases - rename the file from .ts to .old.ts, but avoid it at all costs",
+        "no-export": "Wrong number of exports. Only if it's impossible to follow EvidyTS, for example: 1. you need to support old system, 2. you export decorators - only in those two cases - rename the file from .ts to .old.ts, but avoid it at all costs",
         "name-mismatch": "Export name must match filename",
         "extra-exports": "Extra exports beyond main class/type",
         "extra-top-level": "Extra top-level class/type/interface declarations",
@@ -1509,7 +1512,7 @@ var require_MaxFileLengthRule_lll = __commonJS({
       __metadata2("design:returntype", Number)
     ], MaxFileLengthRule, "getNodeLineCount", null);
     exports2.MaxFileLengthRule = MaxFileLengthRule = MaxFileLengthRule_1 = __decorate2([
-      (0, lll_lll_12.Spec)("Enforces a maximum file length in lines for non-test LLLTS files.")
+      (0, lll_lll_12.Spec)("Enforces a maximum file length in lines for non-test EvidyTS files.")
     ], MaxFileLengthRule);
   }
 });
@@ -1850,7 +1853,7 @@ var require_MaxMethodLengthRule_lll = __commonJS({
       __metadata2("design:returntype", Object)
     ], MaxMethodLengthRule, "getRule", null);
     exports2.MaxMethodLengthRule = MaxMethodLengthRule = MaxMethodLengthRule_1 = __decorate2([
-      (0, lll_lll_12.Spec)("Enforces a maximum method body length in lines for all methods in LLLTS classes.")
+      (0, lll_lll_12.Spec)("Enforces a maximum method body length in lines for all methods in EvidyTS classes.")
     ], MaxMethodLengthRule);
   }
 });
@@ -5938,7 +5941,7 @@ var require_ClientTunnelRunner_lll = __commonJS({
         const detail = this.formatError(error);
         const message = [
           "Playwright Chromium was missing.",
-          "LLLTS attempted to install it automatically but Chromium is still unavailable.",
+          "EvidyTS attempted to install it automatically but Chromium is still unavailable.",
           "If this keeps happening, the project environment is blocking the Playwright installer and needs maintainer attention."
         ].join(" ");
         if (detail.length === 0) {
@@ -7069,7 +7072,7 @@ var LLLTS = class LLLTS2 {
       return { mode: "compile", exitCode: 1 };
     }
     const clientTunnelConfig = clientTunnelConfigResult.config;
-    console.log(`LLLTS Compiler ${package_json_1.default.version}`);
+    console.log(`EvidyTS Compiler ${package_json_1.default.version}`);
     console.log(`Entry: ${entryFile}`);
     let loader;
     try {
@@ -7154,7 +7157,7 @@ var LLLTS = class LLLTS2 {
     }
     const server = new LlltsServer_lll_1.LlltsServer();
     const port = await server.start(portResult.port, configResult.config);
-    console.log(`LLLTS server listening on http://localhost:${port}`);
+    console.log(`EvidyTS server listening on http://localhost:${port}`);
     return { mode: "server", port };
   }
   static parseServerPort(args) {
@@ -7323,7 +7326,7 @@ ${details}`;
   }
   static formatClientTunnelTimeoutMessage(result) {
     const details = [
-      "Testing took too long, so LLLTS stopped waiting for the browser run.",
+      "Testing took too long, so EvidyTS stopped waiting for the browser run.",
       "A scenario, render cycle, import, or app event handler may be stuck in an infinite loop."
     ];
     const timeoutContext = result.timeoutContext;
@@ -7465,17 +7468,14 @@ ${details}`;
       return;
     }
     if (result.status === "timeout") {
-      console.error(`
-\u274C ${this.formatClientTunnelTimeoutMessage(result)}`);
       return;
     }
-    console.error(`
-\u274C Client tunnel runtime error: ${result.message ?? "No additional details."}`);
+    return;
   }
 };
 exports.LLLTS = LLLTS;
 __decorate([
-  (0, lll_lll_1.Spec)("Reads CLI args and runs LLLTS checks on the target project."),
+  (0, lll_lll_1.Spec)("Reads CLI args and runs EvidyTS checks on the target project."),
   __metadata("design:type", Function),
   __metadata("design:paramtypes", [Array]),
   __metadata("design:returntype", Promise)
@@ -7589,7 +7589,7 @@ __decorate([
   __metadata("design:returntype", void 0)
 ], LLLTS, "printClientTunnelOutput", null);
 exports.LLLTS = LLLTS = __decorate([
-  (0, lll_lll_1.Spec)("CLI entry that loads a LLLTS project, applies rules, and reports diagnostics.")
+  (0, lll_lll_1.Spec)("CLI entry that loads an EvidyTS project, applies rules, and reports diagnostics.")
 ], LLLTS);
 if (require.main === module) {
   LLLTS.main(process.argv.slice(2)).then((result) => {

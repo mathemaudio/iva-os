@@ -113,6 +113,32 @@ export class VirtualFileSystemServiceTest {
 		return { restoredFolderName, restoredFileContent, writes: storage.writeCount, splitContentPersisted }
 	}
 
+	@Scenario('keeps imported image files reloadable when storage only has room for split payloads plus compact metadata')
+	static async keepsImportedImageFilesReloadableUnderTightStorage(subjectFactory: SubjectFactory<VirtualFileSystemService>, scenario: ScenarioParameter): Promise<{ warning: string | null, restoredImageContentLength: number, metadataOmitsDuplicateThumbnailBytes: boolean }> {
+		const scenarioParameter = this.resolveScenarioParameter(subjectFactory, scenario)
+		const assert: AssertFn = scenarioParameter.assert
+		const imageDataUrl = `data:image/png;base64,${'A'.repeat(4096)}`
+		const storage = this.createLimitedStorage(8000)
+		const firstService = new VirtualFileSystemService(storage, 5)
+		firstService.load()
+		const documentsNode = firstService.resolvePath('/Documents')
+		assert(documentsNode !== null, 'Expected /Documents to exist before imported image persistence testing')
+		const importedImage = firstService.createBinaryFile(documentsNode.id, 'Poster.png', 'image/png', imageDataUrl, imageDataUrl)
+		await this.wait(20)
+
+		const secondService = new VirtualFileSystemService(storage, 5)
+		const snapshot = secondService.load()
+		const restoredImageNode = secondService.resolvePath('/Documents/Poster.png')
+		const restoredImageContentLength = restoredImageNode === null ? 0 : (secondService.readBinaryFile(restoredImageNode.id)?.length ?? 0)
+		const metadataRecord = storage.getItem('iva.vfs.v2')
+		const metadataOmitsDuplicateThumbnailBytes = metadataRecord?.includes('thumbnailDataUrl') === false
+		assert(snapshot.warning === null, 'Expected compact split storage to avoid the local-storage warning for one imported image')
+		assert(importedImage.kind === 'file', 'Expected imported image creation to return a file node')
+		assert(restoredImageContentLength === imageDataUrl.length, 'Expected imported image payload bytes to survive reload under tight storage limits')
+		assert(metadataOmitsDuplicateThumbnailBytes, 'Expected compact split storage metadata to omit duplicate thumbnail data for imported images')
+		return { warning: snapshot.warning, restoredImageContentLength, metadataOmitsDuplicateThumbnailBytes }
+	}
+
 	@Scenario('migrates legacy single-record storage into split per-node persistence')
 	static async migratesLegacySingleRecordStorage(subjectFactory: SubjectFactory<VirtualFileSystemService>, scenario: ScenarioParameter): Promise<{ warning: string | null, hasLegacyKey: boolean, hasSplitKey: boolean, hasNodeKey: boolean }> {
 		const scenarioParameter = this.resolveScenarioParameter(subjectFactory, scenario)
@@ -171,6 +197,38 @@ export class VirtualFileSystemServiceTest {
 				return key in valuesByKey ? valuesByKey[key] : null
 			},
 			setItem(key: string, value: string): void {
+				valuesByKey[key] = value
+				this.writeCount += 1
+			},
+			removeItem(key: string): void {
+				delete valuesByKey[key]
+			}
+		}
+	}
+
+	@Spec('Builds an isolated in-memory storage adapter that throws once the accumulated stored bytes exceed a fixed capacity.')
+	private static createLimitedStorage(maxTotalBytes: number): VirtualFileSystemContract['StorageLike'] & { writeCount: number } {
+		const valuesByKey: Record<string, string> = {}
+		return {
+			writeCount: 0,
+			get length(): number {
+				return Object.keys(valuesByKey).length
+			},
+			key(index: number): string | null {
+				const keys = Object.keys(valuesByKey)
+				return keys[index] ?? null
+			},
+			getItem(key: string): string | null {
+				return key in valuesByKey ? valuesByKey[key] : null
+			},
+			setItem(key: string, value: string): void {
+				const nextValuesByKey = { ...valuesByKey, [key]: value }
+				const nextTotalBytes = Object.entries(nextValuesByKey).reduce((totalBytes, [storedKey, storedValue]) => {
+					return totalBytes + storedKey.length + storedValue.length
+				}, 0)
+				if (nextTotalBytes > maxTotalBytes) {
+					throw new Error('Quota exceeded')
+				}
 				valuesByKey[key] = value
 				this.writeCount += 1
 			},

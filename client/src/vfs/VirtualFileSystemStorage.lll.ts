@@ -19,18 +19,13 @@ export class VirtualFileSystemStorage {
 
 	@Spec('Writes the current filesystem metadata and per-file payload records into storage while removing stale payload keys from prior saves.')
 	static write(storage: VirtualFileSystemContract['StorageLike'], schema: VirtualFileSystemContract['Schema']): void {
-		const storedSchema: VirtualFileSystemContract['StoredSchema'] = {
-			version: VirtualFileSystemStorage.currentVersion,
-			rootId: schema.rootId,
-			nodesById: schema.nodesById,
-			childrenById: schema.childrenById
-		}
-		storage.setItem(this.schemaKey, JSON.stringify(storedSchema))
+		const storedSchema = this.buildStoredSchema(schema)
 		const activeFileIds = new Set<string>()
 		for (const [fileId, fileContent] of Object.entries(schema.fileContentsById)) {
 			activeFileIds.add(fileId)
 			storage.setItem(this.buildNodeContentKey(fileId), JSON.stringify(fileContent))
 		}
+		storage.setItem(this.schemaKey, JSON.stringify(storedSchema))
 		for (const staleFileId of this.listPersistedNodeContentIds(storage)) {
 			if (activeFileIds.has(staleFileId) === false) {
 				storage.removeItem(this.buildNodeContentKey(staleFileId))
@@ -85,7 +80,7 @@ export class VirtualFileSystemStorage {
 					fileContentsById
 				},
 				warning: null,
-				shouldRewrite: false
+				shouldRewrite: this.shouldRewriteStoredSchema(normalizedStoredSchema.nodesById, fileContentsById)
 			}
 		} catch {
 			return {
@@ -128,6 +123,55 @@ export class VirtualFileSystemStorage {
 				warning: 'Stored filesystem data could not be read and has been reset to a clean seed.'
 			}
 		}
+	}
+
+	@Spec('Builds one split-storage metadata object that omits duplicate thumbnail bytes already stored in dedicated file payload records.')
+	private static buildStoredSchema(schema: VirtualFileSystemContract['Schema']): VirtualFileSystemContract['StoredSchema'] {
+		return {
+			version: VirtualFileSystemStorage.currentVersion,
+			rootId: schema.rootId,
+			nodesById: this.buildStoredNodesById(schema),
+			childrenById: schema.childrenById
+		}
+	}
+
+	@Spec('Builds the persisted node table while removing thumbnail fields that only duplicate the full binary file payload.')
+	private static buildStoredNodesById(schema: VirtualFileSystemContract['Schema']): Record<string, VirtualFileSystemContract['Node']> {
+		const storedNodesById: Record<string, VirtualFileSystemContract['Node']> = {}
+		for (const [nodeId, node] of Object.entries(schema.nodesById)) {
+			const fileContent = schema.fileContentsById[nodeId]
+			if (
+				node.kind === 'file'
+				&& typeof node.thumbnailDataUrl === 'string'
+				&& fileContent?.encoding === 'data-url'
+				&& fileContent.data === node.thumbnailDataUrl
+			) {
+				const { thumbnailDataUrl: _ignoredThumbnailDataUrl, ...storedNode } = node
+				storedNodesById[nodeId] = storedNode
+				continue
+			}
+			storedNodesById[nodeId] = node
+		}
+		return storedNodesById
+	}
+
+	@Spec('Returns whether one loaded split-storage schema should be compacted again to remove duplicate thumbnail bytes from central metadata.')
+	private static shouldRewriteStoredSchema(
+		nodesById: Record<string, VirtualFileSystemContract['Node']>,
+		fileContentsById: VirtualFileSystemContract['FileContentsById']
+	): boolean {
+		for (const node of Object.values(nodesById)) {
+			const fileContent = fileContentsById[node.id]
+			if (
+				node.kind === 'file'
+				&& typeof node.thumbnailDataUrl === 'string'
+				&& fileContent?.encoding === 'data-url'
+				&& fileContent.data === node.thumbnailDataUrl
+			) {
+				return true
+			}
+		}
+		return false
 	}
 
 	@Spec('Builds the in-memory file-content table by reading one dedicated localStorage record for each persisted file node.')

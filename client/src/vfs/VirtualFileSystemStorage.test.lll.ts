@@ -8,7 +8,7 @@ export class VirtualFileSystemStorageTest {
 	testType = 'unit'
 
 	@Scenario('writes central metadata separately from per-node file payload records')
-	static async writesMetadataAndNodeRecords(scenario: ScenarioParameter): Promise<{ hasMetadataRecord: boolean, hasNodeRecord: boolean, metadataOmitsPayloads: boolean }> {
+	static async writesMetadataAndNodeRecords(scenario: ScenarioParameter): Promise<{ hasMetadataRecord: boolean, hasNodeRecord: boolean, metadataOmitsPayloads: boolean, metadataOmitsDuplicateThumbnailBytes: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const storage = this.createMemoryStorage()
 		VirtualFileSystemStorage.write(storage, this.buildSchema())
@@ -17,10 +17,12 @@ export class VirtualFileSystemStorageTest {
 		const hasMetadataRecord = metadataRecord !== null
 		const hasNodeRecord = readmeRecord !== null
 		const metadataOmitsPayloads = metadataRecord?.includes('fileContentsById') === false
+		const metadataOmitsDuplicateThumbnailBytes = metadataRecord?.includes('thumbnailDataUrl') === false
 		assert(hasMetadataRecord, 'Expected the split-storage metadata record to be written')
 		assert(hasNodeRecord, 'Expected the text file payload to be written to a dedicated iva.node-* key')
 		assert(metadataOmitsPayloads, 'Expected central VFS metadata to omit inline file payload bytes')
-		return { hasMetadataRecord, hasNodeRecord, metadataOmitsPayloads }
+		assert(metadataOmitsDuplicateThumbnailBytes, 'Expected central VFS metadata to omit duplicate thumbnail data when it matches the full image payload')
+		return { hasMetadataRecord, hasNodeRecord, metadataOmitsPayloads, metadataOmitsDuplicateThumbnailBytes }
 	}
 
 	@Scenario('reads split-storage metadata and payload records back into one in-memory schema')
@@ -56,6 +58,26 @@ export class VirtualFileSystemStorageTest {
 		assert(readResult.shouldRewrite, 'Expected legacy migration to request a split-storage rewrite')
 		assert(restoredText === 'Seeded', 'Expected legacy migration to preserve text payload bytes')
 		return { warning: readResult.warning, shouldRewrite: readResult.shouldRewrite, restoredText }
+	}
+
+	@Scenario('marks older split-storage records for compaction when they still duplicate thumbnail bytes in metadata')
+	static async requestsRewriteForDuplicatedThumbnailBytes(scenario: ScenarioParameter): Promise<{ shouldRewrite: boolean, restoredThumbnailMissing: boolean, restoredImageEncoding: string | null }> {
+		const assert: AssertFn = scenario.assert
+		const storage = this.createMemoryStorage()
+		storage.setItem('iva.vfs.v2', JSON.stringify(this.buildSchema()))
+		storage.setItem('iva.node-node-7', JSON.stringify({ encoding: 'utf8', data: 'Seeded' }))
+		storage.setItem('iva.node-node-8', JSON.stringify({ encoding: 'data-url', data: 'data:image/jpeg;base64,ZmFrZS1pbWFnZS1kYXRh' }))
+		const readResult = VirtualFileSystemStorage.read(storage)
+		assert(readResult.kind === 'loaded', 'Expected duplicated-thumbnail split storage to remain readable')
+		if (readResult.kind !== 'loaded') {
+			throw new Error('Expected loaded duplicated-thumbnail split storage result')
+		}
+		const restoredThumbnailMissing = typeof readResult.schema.nodesById['node-8']?.thumbnailDataUrl !== 'string'
+		const restoredImageEncoding = readResult.schema.fileContentsById['node-8']?.encoding ?? null
+		assert(readResult.shouldRewrite, 'Expected duplicated thumbnail bytes in metadata to request one compaction rewrite')
+		assert(restoredThumbnailMissing === false, 'Expected existing duplicated-thumbnail metadata to stay readable until compaction runs')
+		assert(restoredImageEncoding === 'data-url', 'Expected duplicated-thumbnail split storage to keep its binary payload readable')
+		return { shouldRewrite: readResult.shouldRewrite, restoredThumbnailMissing, restoredImageEncoding }
 	}
 
 	@Scenario('clears split and legacy records together for isolated reset flows')
