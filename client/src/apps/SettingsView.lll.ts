@@ -2,11 +2,14 @@ import { LitElement, css, html, type PropertyValues, type TemplateResult } from 
 import { customElement, property, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
 import type { PlatformContract } from '../platform/PlatformContract.lll'
+import { EmojiIconRenderer } from '../EmojiIconRenderer.lll'
 
 @Spec('Renders the platform-backed Settings app through the stable application context instead of direct shell callbacks.')
 @customElement('iva-settings-view')
 export class SettingsView extends LitElement {
-	static styles = css`
+	static styles = [
+		EmojiIconRenderer.styles,
+		css`
 		:host {
 			display: block;
 			height: 100%;
@@ -64,6 +67,7 @@ export class SettingsView extends LitElement {
 			color: inherit;
 		}
 	`
+	]
 
 	@property({ attribute: false })
 	platformContext: PlatformContract['ApplicationContext'] | null = null
@@ -104,7 +108,7 @@ export class SettingsView extends LitElement {
 		}
 		return html`
 			<div class="settings-grid" data-testid="settings-view">
-				<div class="status-pill">⚙️ Settings are saved locally in this browser</div>
+				<div class="status-pill">${EmojiIconRenderer.renderIcon('⚙️', 'Settings')}<span>Settings are saved locally in this browser</span></div>
 				<section class="settings-panel">
 					<header>
 						<strong>Appearance mode</strong>

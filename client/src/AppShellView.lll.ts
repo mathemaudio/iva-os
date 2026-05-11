@@ -1,9 +1,12 @@
 import { css, html, type CSSResultGroup, type TemplateResult } from 'lit'
 import { Spec } from '@shared/lll.lll'
+import { EmojiIconRenderer } from './EmojiIconRenderer.lll'
 
 @Spec('Provides shared shell styles plus settings-window rendering helpers for IvaOS.')
 export class AppShellView {
-	static readonly styles: CSSResultGroup = css`
+	static readonly styles: CSSResultGroup = [
+		EmojiIconRenderer.styles,
+		css`
 		:host {
 			display: block;
 			height: 100vh;
@@ -244,7 +247,7 @@ export class AppShellView {
 			min-width: 0;
 		}
 
-		.window-title > span {
+		.window-title > .emoji-icon {
 			font-size: calc(15px * var(--shell-density-scale));
 		}
 
@@ -468,6 +471,10 @@ export class AppShellView {
 			padding-bottom: calc(10px * var(--shell-density-scale));
 		}
 
+		.dock button > .emoji-icon {
+			font-size: calc(24px * var(--shell-density-scale));
+		}
+
 		.dock button[data-running='true'] {
 			background: color-mix(in srgb, var(--shell-selection) 84%, var(--shell-control));
 			border-color: color-mix(in srgb, var(--shell-selection-border) 60%, var(--shell-control-border));
@@ -512,6 +519,10 @@ export class AppShellView {
 			font-size: calc(25.6px * var(--shell-density-scale));
 		}
 
+		.launcher-card > .emoji-icon {
+			font-size: calc(25.6px * var(--shell-density-scale));
+		}
+
 		.status-pill {
 			display: inline-flex;
 			align-items: center;
@@ -525,6 +536,7 @@ export class AppShellView {
 		}
 
 		`
+	]
 
 	@Spec('Renders the shell settings content with independent theme and wallpaper selection controls.')
 	static renderSettingsContent(
@@ -536,7 +548,7 @@ export class AppShellView {
 	): TemplateResult {
 		return html`
 			<div class="settings-grid">
-				<div class="status-pill">⚙️ Settings are saved locally in this browser</div>
+				<div class="status-pill">${EmojiIconRenderer.renderIcon('⚙️', 'Settings')}<span>Settings are saved locally in this browser</span></div>
 				<section class="settings-panel">
 					<header>
 						<strong>Appearance mode</strong>

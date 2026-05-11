@@ -7,6 +7,7 @@ import { FileManagerViewStyles } from './FileManagerViewStyles.lll'
 import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
 import { FileManagerDropImporter } from './FileManagerDropImporter.lll';
+import { EmojiIconRenderer } from '../EmojiIconRenderer.lll'
 
 @Spec('Renders the Sprint 2 file manager browsing experience on top of the shared virtual filesystem service.')
 @customElement('iva-file-manager-view')
@@ -249,7 +250,7 @@ export class FileManagerView extends LitElement {
 			return html`<img src=${binarySource} alt=${node.name} />`
 		}
 		const symbol = node.kind === 'folder' ? '📁' : typeof node.mimeType === 'string' && node.mimeType.startsWith('image/') ? '🖼️' : '📄'
-		return html`<span>${symbol}</span>`
+		return EmojiIconRenderer.renderIcon(symbol, `${node.kind === 'folder' ? 'Folder' : 'File'} icon`)
 	}
 
 	@Spec('Renders the rename dialog for the current selection.')

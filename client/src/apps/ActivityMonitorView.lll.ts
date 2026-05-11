@@ -2,11 +2,14 @@ import { LitElement, css, html, type PropertyValues, type TemplateResult } from 
 import { customElement, property, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
 import type { PlatformContract } from '../platform/PlatformContract.lll'
+import { EmojiIconRenderer } from '../EmojiIconRenderer.lll'
 
 @Spec('Renders the browser-hosted Activity Monitor with running apps, signal history, and runtime stats tabs.')
 @customElement('iva-activity-monitor-view')
 export class ActivityMonitorView extends LitElement {
-	static styles = css`
+	static styles = [
+		EmojiIconRenderer.styles,
+		css`
 		:host {
 			display: block;
 			height: 100%;
@@ -204,6 +207,7 @@ export class ActivityMonitorView extends LitElement {
 			margin: 0;
 		}
 	`
+	]
 
 	@property({ attribute: false })
 	platformContext: PlatformContract['ApplicationContext'] | null = null
@@ -323,7 +327,7 @@ export class ActivityMonitorView extends LitElement {
 									<div class="app-row">
 										<div class="card-copy">
 											<div class="app-title-row">
-												<strong>${app.icon} ${app.appName}</strong>
+												<strong>${EmojiIconRenderer.renderIcon(app.icon, `${app.appName} icon`)} ${app.appName}</strong>
 												${app.isFocused ? html`<span class="badge" data-kind="focused">Focused</span>` : null}
 												${app.isMinimized ? html`<span class="badge" data-kind="minimized">Minimized</span>` : null}
 											</div>

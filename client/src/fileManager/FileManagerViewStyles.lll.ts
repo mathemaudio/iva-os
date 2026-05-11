@@ -1,9 +1,12 @@
 import { css, type CSSResultGroup } from 'lit'
 import { Spec } from '@shared/lll.lll'
+import { EmojiIconRenderer } from '../EmojiIconRenderer.lll'
 
 @Spec('Provides shared styles for the File Manager browsing experience.')
 export class FileManagerViewStyles {
-	static readonly styles: CSSResultGroup = css`
+	static readonly styles: CSSResultGroup = [
+		EmojiIconRenderer.styles,
+		css`
 		:host {
 			--file-manager-scrollbar-track: var(--shell-scrollbar-track, rgba(255, 255, 255, 0.08));
 			--file-manager-scrollbar-thumb: var(--shell-scrollbar-thumb, rgba(226, 232, 240, 0.58));
@@ -457,4 +460,5 @@ export class FileManagerViewStyles {
 			border: 0;
 		}
 	`
+	]
 }

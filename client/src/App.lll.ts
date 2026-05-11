@@ -8,6 +8,7 @@ import './apps/ImageViewerView.lll'
 import './apps/SettingsView.lll'
 import './apps/ActivityMonitorView.lll'
 import { AppShellView } from './AppShellView.lll'
+import { EmojiIconRenderer } from './EmojiIconRenderer.lll'
 import { AppAssociationRegistry } from './shell/AppAssociationRegistry.lll'
 import { ShellWallpaperCatalog } from './shell/ShellWallpaperCatalog.lll'
 import { WallpaperSeeder } from './shell/WallpaperSeeder.lll'
@@ -618,7 +619,7 @@ export class App extends LitElement {
 											<button data-role="maximize" data-testid="maximize-${windowEntry.appId}" aria-label=${`${windowEntry.isMaximized ? 'Restore' : 'Maximize'} ${windowEntry.title}`} @click=${(event: Event) => { event.stopPropagation(); this.toggleMaximizeWindow(windowEntry.id) }}>${windowEntry.isMaximized ? 'Restore' : 'Maximize'}</button>
 										</div>
 										<div class="window-title">
-											<span>${windowEntry.icon}</span>
+											${EmojiIconRenderer.renderIcon(windowEntry.icon, `${windowEntry.title} icon`)}
 											<div>
 												<div>${windowEntry.title}</div>
 												<div class="window-subtitle">${windowEntry.description}</div>
@@ -644,7 +645,7 @@ export class App extends LitElement {
 								<div class="launcher-grid">
 									${this.appWindowCatalog.availableApps.map(appEntry => html`
 										<button class="launcher-card" data-testid="launcher-app-${appEntry.id}" @click=${() => this.openApp(appEntry.id)}>
-											<span class="icon-tile">${appEntry.icon}</span>
+											${EmojiIconRenderer.renderIcon(appEntry.icon, `${appEntry.name} icon`, 'icon-tile')}
 											<strong>${appEntry.name}</strong>
 											<small>${appEntry.description}</small>
 										</button>
@@ -665,7 +666,7 @@ export class App extends LitElement {
 									data-running=${String(this.isAppRunning(appEntry.id))}
 									@click=${() => openWindow === undefined ? this.openApp(appEntry.id) : this.restoreAndFocusWindow(openWindow.id)}
 								>
-									<span>${appEntry.icon}</span>
+									${EmojiIconRenderer.renderIcon(appEntry.icon, `${appEntry.name} icon`)}
 									<span class="dock-label">${appEntry.name}</span>
 								</button>
 							`
