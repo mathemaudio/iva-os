@@ -523,7 +523,8 @@ export class AppShellView {
 			border: 1px solid var(--shell-status-border);
 			color: var(--shell-status-text);
 		}
-	`
+
+		`
 
 	@Spec('Renders the shell settings content with independent theme and wallpaper selection controls.')
 	static renderSettingsContent(

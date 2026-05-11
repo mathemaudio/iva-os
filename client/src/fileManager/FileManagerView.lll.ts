@@ -1,4 +1,4 @@
-import { LitElement, html, type PropertyValues, type TemplateResult } from 'lit'
+import { LitElement, html, nothing, type PropertyValues, type TemplateResult } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { Spec } from '@shared/lll.lll'
 import { FileManagerFormatting } from './FileManagerFormatting.lll'
@@ -6,9 +6,13 @@ import { FileManagerSnapshot } from './FileManagerSnapshot.lll'
 import { FileManagerViewStyles } from './FileManagerViewStyles.lll'
 import type { PlatformContract } from '../platform/PlatformContract.lll'
 import type { VirtualFileSystemContract } from '../vfs/VirtualFileSystemContract.lll'
+import { FileManagerDropImporter } from './FileManagerDropImporter.lll';
+
 @Spec('Renders the Sprint 2 file manager browsing experience on top of the shared virtual filesystem service.')
 @customElement('iva-file-manager-view')
 export class FileManagerView extends LitElement {
+	private readonly fileManagerDropImporter = new FileManagerDropImporter(this);
+
 	static styles = FileManagerViewStyles.styles
 	@property({ attribute: false })
 	platformContext: PlatformContract['ApplicationContext'] | null = null
@@ -74,31 +78,37 @@ export class FileManagerView extends LitElement {
 			return html`<div class="status-pill" data-testid="file-manager-loading">Loading shared filesystem…</div>`
 		}
 
-		const currentFolderNode = FileManagerSnapshot.getCurrentFolder(this.snapshot, this.currentFolderId)
-		const visibleNodes = FileManagerSnapshot.getChildren(this.snapshot, currentFolderNode.id)
-		const selectedNode = this.selectedNodeId === null ? null : this.snapshot.schema.nodesById[this.selectedNodeId] ?? null
-		const sidebarLocations = FileManagerSnapshot.getSidebarLocations(this.snapshot)
-		const breadcrumbs = FileManagerSnapshot.getBreadcrumbs(this.snapshot, currentFolderNode.id)
-		const renameNode = this.renameNodeId === null ? null : this.snapshot.schema.nodesById[this.renameNodeId] ?? null
-		const moveNode = this.moveNodeId === null ? null : this.snapshot.schema.nodesById[this.moveNodeId] ?? null
-		const deleteNode = this.deleteNodeId === null ? null : this.snapshot.schema.nodesById[this.deleteNodeId] ?? null
-		const folderChoices = this.moveNodeId === null ? [] : FileManagerSnapshot.getMoveDestinationFolders(this.snapshot, this.moveNodeId)
+		const snapshot = this.snapshot
+		const currentFolderNode = FileManagerSnapshot.getCurrentFolder(snapshot, this.currentFolderId)
+		const visibleNodes = FileManagerSnapshot.getChildren(snapshot, currentFolderNode.id)
+		const selectedNode = this.selectedNodeId === null ? null : snapshot.schema.nodesById[this.selectedNodeId] ?? null
+		const sidebarLocations = FileManagerSnapshot.getSidebarLocations(snapshot)
+		const breadcrumbs = FileManagerSnapshot.getBreadcrumbs(snapshot, currentFolderNode.id)
+		const renameNode = this.renameNodeId === null ? null : snapshot.schema.nodesById[this.renameNodeId] ?? null
+		const moveNode = this.moveNodeId === null ? null : snapshot.schema.nodesById[this.moveNodeId] ?? null
+		const deleteNode = this.deleteNodeId === null ? null : snapshot.schema.nodesById[this.deleteNodeId] ?? null
+		const folderChoices = this.moveNodeId === null ? [] : FileManagerSnapshot.getMoveDestinationFolders(snapshot, this.moveNodeId)
 		const currentFolderName = currentFolderNode.name === '' ? 'Home' : currentFolderNode.name
+		const currentFolderPath = FileManagerSnapshot.describeNodePath(snapshot, currentFolderNode.id)
 		return html`
-			<div class="file-manager" data-testid="file-manager-view" data-view-mode=${this.viewMode}>
+			<div class="file-manager" data-testid="file-manager-view" data-view-mode=${this.viewMode} data-drop-folder-path=${currentFolderPath}>
 				<aside class="sidebar">
 					<h3>Locations</h3>
 					<div class="sidebar-list">
-						${sidebarLocations.map(location => html`
-							<button
-								class="sidebar-button"
-								data-testid=${`file-manager-sidebar-${location.name}`}
-								data-active=${String(currentFolderNode.id === location.id)}
-								@click=${() => this.navigateToFolder(location.id)}
+						${sidebarLocations.map(location => {
+							const locationPath = FileManagerSnapshot.describeNodePath(snapshot, location.id)
+							return html`
+								<button
+									class="sidebar-button"
+									data-testid=${`file-manager-sidebar-${location.name}`}
+									data-active=${String(currentFolderNode.id === location.id)}
+									data-drop-folder-path=${locationPath}
+									@click=${() => this.navigateToFolder(location.id)}
 							>
 								${location.name}
 							</button>
-						`)}
+							`
+						})}
 					</div>
 				</aside>
 				<section class="main">
@@ -176,6 +186,9 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Renders one visible node inside the icon-first grid view.')
 	private renderGridNode(node: VirtualFileSystemContract['Node']): TemplateResult {
+		const dropFolderPath = this.snapshot !== null && node.kind === 'folder'
+			? FileManagerSnapshot.describeNodePath(this.snapshot, node.id)
+			: null
 		return html`
 			<button
 				class="node-card"
@@ -184,6 +197,7 @@ export class FileManagerView extends LitElement {
 				data-node-kind=${node.kind}
 				data-selected=${String(this.selectedNodeId === node.id)}
 				data-focused=${String(this.focusedNodeId === node.id)}
+				data-drop-folder-path=${dropFolderPath ?? nothing}
 				@click=${() => this.selectNode(node.id)}
 				@dblclick=${() => this.activateNode(node.id)}
 				@focus=${() => this.focusNode(node.id)}
@@ -198,6 +212,9 @@ export class FileManagerView extends LitElement {
 
 	@Spec('Renders one visible node inside the list view with Name, Type, Modified, and Size columns.')
 	private renderListNode(node: VirtualFileSystemContract['Node']): TemplateResult {
+		const dropFolderPath = this.snapshot !== null && node.kind === 'folder'
+			? FileManagerSnapshot.describeNodePath(this.snapshot, node.id)
+			: null
 		return html`
 			<button
 				class="node-row"
@@ -206,6 +223,7 @@ export class FileManagerView extends LitElement {
 				data-node-kind=${node.kind}
 				data-selected=${String(this.selectedNodeId === node.id)}
 				data-focused=${String(this.focusedNodeId === node.id)}
+				data-drop-folder-path=${dropFolderPath ?? nothing}
 				@click=${() => node.kind === 'folder' ? this.activateNode(node.id) : this.selectNode(node.id)}
 				@dblclick=${() => this.activateNode(node.id)}
 				@focus=${() => this.focusNode(node.id)}
@@ -631,46 +649,11 @@ export class FileManagerView extends LitElement {
 			return
 		}
 		const uploadedFiles = Array.from(input.files)
-		let unsupportedCount = 0
-		for (const uploadedFile of uploadedFiles) {
-			const extension = FileManagerFormatting.readExtension(uploadedFile.name)
-			const isTextFile = uploadedFile.type.startsWith('text/') || extension === 'txt' || extension === 'md' || extension === 'json'
-			const isImageFile = uploadedFile.type.startsWith('image/') || extension === 'png' || extension === 'jpg' || extension === 'jpeg' || extension === 'webp' || extension === 'gif'
-			if (isTextFile) {
-				const content = await uploadedFile.text()
-				this.platformContext.filesystem.createTextFile(currentFolderNode.id, uploadedFile.name, content)
-				continue
-			}
-			if (isImageFile) {
-				const dataUrl = await this.readFileAsDataUrl(uploadedFile)
-				const mimeType = uploadedFile.type === '' ? FileManagerFormatting.inferImageMimeType(uploadedFile.name) : uploadedFile.type
-				this.platformContext.filesystem.createBinaryFile(currentFolderNode.id, uploadedFile.name, mimeType, dataUrl, dataUrl)
-				continue
-			}
-			unsupportedCount += 1
-		}
+		const unsupportedCount = await this.fileManagerDropImporter.importFilesIntoFolder(uploadedFiles, currentFolderNode.id)
 		input.value = ''
 		this.errorMessage = unsupportedCount > 0
 			? `${String(unsupportedCount)} file${unsupportedCount === 1 ? '' : 's'} could not be imported because only text and image uploads are supported right now.`
 			: null
-	}
-
-	@Spec('Reads one host file into a data URL so it can be persisted through the virtual filesystem binary payload table.')
-	private async readFileAsDataUrl(file: File): Promise<string> {
-		return await new Promise((resolve, reject) => {
-			const reader = new FileReader()
-			reader.addEventListener('load', () => {
-				if (typeof reader.result !== 'string') {
-					reject(new Error('Expected a string data URL result.'))
-					return
-				}
-				resolve(reader.result)
-			})
-			reader.addEventListener('error', () => {
-				reject(reader.error ?? new Error('Failed to read host file.'))
-			})
-			reader.readAsDataURL(file)
-		})
 	}
 
 	@Spec('Returns the active current folder node when the snapshot is ready.')

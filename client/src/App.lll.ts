@@ -24,11 +24,7 @@ import { PlatformRuntimeService } from './platform/runtime/PlatformRuntimeServic
 import { AppWindowContextRegistry } from './shell/AppWindowContextRegistry.lll';
 import { AppRuntimeSnapshotBuilder } from './shell/runtime/AppRuntimeSnapshotBuilder.lll';
 import { AppChildWindowBridge } from './shell/windowing/AppChildWindowBridge.lll';
-
-
-
-
-
+import './shell/dnd/ShellFileDrop.lll'
 
 @Spec('Composes the browser-hosted operating shell with shared VFS-backed apps, launcher routing, and persisted appearance settings.')
 @customElement('app-root')
@@ -580,6 +576,7 @@ export class App extends LitElement {
 		const wallpaperStyle = ShellWallpaperCatalog.getBackgroundStyle(this.activeWallpaper, this.vfsSnapshot, fileId => this.platformFileSystemService.readBinaryFile(fileId))
 		return html`
 			<div class="shell" data-theme=${this.activeTheme} data-wallpaper=${this.activeWallpaper} style=${wallpaperStyle}>
+				<iva-shell-file-drop .filesystem=${this.platformFileSystemService.toContract()}></iva-shell-file-drop>
 				<header class="top-bar" data-testid="top-bar">
 					<div class="brand">
 						<strong>IvaOS</strong>
@@ -587,7 +584,7 @@ export class App extends LitElement {
 					</div>
 					<div class="top-bar-clock">${this.getClockLabel()}</div>
 				</header>
-				<section class="desktop" data-testid="desktop-surface" @mousemove=${(event: MouseEvent) => { this.onWindowDrag(event); this.onWindowResize(event) }} @mouseup=${() => this.endWindowPointerSession()}>
+				<section class="desktop" data-testid="desktop-surface" data-drop-folder-path="/Desktop" @mousemove=${(event: MouseEvent) => { this.onWindowDrag(event); this.onWindowResize(event) }} @mouseup=${() => this.endWindowPointerSession()}>
 					${this.windows.filter(windowEntry => windowEntry.isMinimized === false).length === 0
 						? html`
 							<div class="desktop-empty-state">
@@ -610,6 +607,7 @@ export class App extends LitElement {
 									data-window-id=${String(windowEntry.id)}
 									data-maximized=${String(windowEntry.isMaximized)}
 									data-focused=${String(windowEntry.id === focusedWindowId)}
+									data-current-folder-id=${windowEntry.appId === 'file-manager' ? windowEntry.openedNodeId ?? '' : ''}
 									style=${`left:${windowEntry.left}px;top:${windowEntry.top}px;width:${windowEntry.width}px;height:${windowEntry.height}px;z-index:${windowEntry.zIndex};`}
 									@click=${() => this.focusWindow(windowEntry.id)}
 								>
