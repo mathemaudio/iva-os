@@ -28,8 +28,9 @@ export class SettingsView extends LitElement {
 			padding: calc(8px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			width: fit-content;
 			border-radius: 999px;
-			background: rgba(255, 255, 255, 0.1);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: var(--shell-status, rgba(60, 160, 84, 0.16));
+			border: 1px solid var(--shell-status-border, rgba(98, 202, 123, 0.34));
+			color: var(--shell-status-text, inherit);
 		}
 
 		.settings-panel {
@@ -37,8 +38,9 @@ export class SettingsView extends LitElement {
 			gap: calc(12px * var(--shell-density-scale, 1));
 			padding: calc(16px * var(--shell-density-scale, 1));
 			border-radius: calc(16px * var(--shell-density-scale, 1));
-			background: rgba(255, 255, 255, 0.08);
-			border: 1px solid rgba(255, 255, 255, 0.12);
+			background: color-mix(in srgb, var(--shell-control-strong, rgba(255, 255, 255, 0.1)) 86%, transparent);
+			border: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
+			box-shadow: inset 0 1px 0 var(--shell-window-inner-border, rgba(255, 255, 255, 0.05));
 		}
 
 		header,
@@ -55,16 +57,21 @@ export class SettingsView extends LitElement {
 		}
 
 		.settings-note {
-			color: rgba(226, 232, 240, 0.82);
+			color: var(--shell-muted-text, rgba(226, 232, 240, 0.82));
 		}
 
 		.settings-select {
 			font: inherit;
 			padding: calc(10px * var(--shell-density-scale, 1)) calc(12px * var(--shell-density-scale, 1));
 			border-radius: calc(12px * var(--shell-density-scale, 1));
-			border: 1px solid rgba(255, 255, 255, 0.14);
-			background: rgba(255, 255, 255, 0.08);
+			border: 1px solid var(--shell-control-border, rgba(255, 255, 255, 0.14));
+			background: var(--shell-control, rgba(255, 255, 255, 0.08));
 			color: inherit;
+		}
+
+		.settings-select:focus-visible {
+			outline: 2px solid var(--shell-selection-border, rgba(122, 168, 255, 0.56));
+			outline-offset: 2px;
 		}
 	`
 	]

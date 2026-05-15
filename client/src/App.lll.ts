@@ -8,7 +8,7 @@ import './apps/ImageViewerView.lll'
 import './apps/SettingsView.lll'
 import './apps/ActivityMonitorView.lll'
 import './apps/TerminalView.lll'
-import { AppShellView } from './AppShellView.lll'
+import { AppStyles } from './AppStyles.lll'
 import { EmojiIconRenderer } from './EmojiIconRenderer.lll'
 import { AppAssociationRegistry } from './shell/AppAssociationRegistry.lll'
 import { ShellWallpaperCatalog } from './shell/ShellWallpaperCatalog.lll'
@@ -38,7 +38,7 @@ export class App extends LitElement {
 	private readonly appWindowContextRegistry = new AppWindowContextRegistry(this);
 
 	public readonly appWindowCatalog = new AppWindowCatalog()
-	static styles = AppShellView.styles
+	static styles = AppStyles.styles
 
 	@state()
 	private activeTheme: string = 'dark'
@@ -165,9 +165,11 @@ export class App extends LitElement {
 
 	@Spec('Stores one fresh snapshot from the shared VFS and synchronizes dependent shell state such as wallpaper fallback and folder titles.')
 	private handleSnapshotChange(snapshot: VirtualFileSystemContract['Snapshot']): void {
+		const previousSettingsSnapshot = this.getSettingsSnapshot()
 		this.vfsSnapshot = snapshot
 		this.ensureWallpaperSelectionMatchesSnapshot(snapshot)
 		this.synchronizeWindowStateWithSnapshot(snapshot)
+		this.emitSettingsSnapshotIfChanged(previousSettingsSnapshot)
 		this.platformRuntimeService.recordEvent('internal', 'filesystem', 'Filesystem updated', `VFS now tracks ${String(Object.keys(snapshot.schema.nodesById).length)} items.`)
 	}
 
@@ -203,6 +205,23 @@ export class App extends LitElement {
 			theme: this.activeTheme,
 			wallpaper: this.activeWallpaper,
 			wallpaperChoices: ShellWallpaperCatalog.getChoices(this.vfsSnapshot)
+		}
+	}
+
+	@Spec('Emits one settings update when theme, wallpaper, or wallpaper choices changed after a filesystem refresh.')
+	private emitSettingsSnapshotIfChanged(previousSnapshot: PlatformContract['SettingsSnapshot']): void {
+		const nextSnapshot = this.getSettingsSnapshot()
+		if (previousSnapshot.theme !== nextSnapshot.theme || previousSnapshot.wallpaper !== nextSnapshot.wallpaper || previousSnapshot.wallpaperChoices.length !== nextSnapshot.wallpaperChoices.length) {
+			this.platformSettingsService.emitChange()
+			return
+		}
+		for (let index = 0; index < previousSnapshot.wallpaperChoices.length; index += 1) {
+			const previousChoice = previousSnapshot.wallpaperChoices[index]
+			const nextChoice = nextSnapshot.wallpaperChoices[index]
+			if (previousChoice.id !== nextChoice.id || previousChoice.label !== nextChoice.label) {
+				this.platformSettingsService.emitChange()
+				return
+			}
 		}
 	}
 
