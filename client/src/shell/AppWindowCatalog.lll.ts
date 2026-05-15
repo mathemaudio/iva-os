@@ -14,6 +14,7 @@ export class AppWindowCatalog {
 			{ id: 'text-editor', name: 'Text Editor', icon: '📝', description: 'Create and edit text files from the shared VFS.', isPinnedToDock: true },
 			{ id: 'image-viewer', name: 'Image Viewer', icon: '🖼️', description: 'Open image files from the shared VFS.', isPinnedToDock: false },
 			{ id: 'activity-monitor', name: 'Activity Monitor', icon: '📈', description: 'Inspect running apps, signals, and runtime memory usage.', isPinnedToDock: true },
+			{ id: 'terminal', name: 'Terminal', icon: '🖥️', description: 'Run a small Unix-like file-system command set against the shared VFS.', isPinnedToDock: true },
 			{ id: 'settings', name: 'Settings', icon: '⚙️', description: 'Adjust theme and wallpaper preferences.', isPinnedToDock: true },
 			{ id: 'app-studio', name: 'App Studio', icon: '🧪', description: 'Build apps soon.', isPinnedToDock: false }
 		]
@@ -29,6 +30,9 @@ export class AppWindowCatalog {
 			}
 			if (appId === 'file-manager') {
 				return 520
+			}
+			if (appId === 'terminal') {
+				return 460
 			}
 			if (appId === 'text-editor' || appId === 'image-viewer') {
 				return 520
@@ -50,6 +54,9 @@ export class AppWindowCatalog {
 			}
 			if (appId === 'text-editor') {
 				return 720
+			}
+			if (appId === 'terminal') {
+				return 760
 			}
 			if (appId === 'image-viewer') {
 				return 700

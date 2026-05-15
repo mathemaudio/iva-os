@@ -7,17 +7,19 @@ export class AppWindowCatalogTest {
 	testType = 'unit'
 
 	@Scenario('exposes seeded shell apps and default window sizes for known app ids')
-	static async exposesAppMetadataAndSizes(subjectFactory: SubjectFactory<AppWindowCatalog>, scenario: ScenarioParameter): Promise<{ appCount: number, fileManagerWidth: number, settingsHeight: number }> {
+	static async exposesAppMetadataAndSizes(subjectFactory: SubjectFactory<AppWindowCatalog>, scenario: ScenarioParameter): Promise<{ appCount: number, fileManagerWidth: number, settingsHeight: number, terminalPinned: boolean }> {
 		const scenarioParameter = this.resolveScenarioParameter(subjectFactory, scenario)
 		const assert: AssertFn = scenarioParameter.assert
 		const catalog = new AppWindowCatalog()
 		const appCount = catalog.availableApps.length
 		const fileManagerWidth = catalog.getWindowWidth('file-manager')
 		const settingsHeight = catalog.getWindowHeight('settings')
-		assert(appCount >= 5, 'Expected the shell catalog to expose the seeded core apps')
+		const terminalPinned = catalog.availableApps.some(appEntry => appEntry.id === 'terminal' && appEntry.isPinnedToDock)
+		assert(appCount >= 6, 'Expected the shell catalog to expose the seeded core apps including Terminal')
 		assert(fileManagerWidth === 760, 'Expected File Manager to keep its default width')
 		assert(settingsHeight === 430, 'Expected Settings to keep its default height')
-		return { appCount, fileManagerWidth, settingsHeight }
+		assert(terminalPinned, 'Expected Terminal to be pinned to the dock')
+		return { appCount, fileManagerWidth, settingsHeight, terminalPinned }
 	}
 
 	@Spec('Resolves the actual scenario parameter when the runner forwards either one or two callback arguments.')

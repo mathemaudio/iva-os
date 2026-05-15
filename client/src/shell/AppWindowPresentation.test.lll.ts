@@ -12,14 +12,15 @@ export class AppWindowPresentationTest {
 	testType = 'unit'
 
 	@Scenario('builds window titles from app metadata and opened VFS nodes')
-	static async buildsWindowTitles(scenario: ScenarioParameter): Promise<{ fileManagerTitle: string, textEditorTitle: string, fallbackTitle: string }> {
+	static async buildsWindowTitles(scenario: ScenarioParameter): Promise<{ fileManagerTitle: string, textEditorTitle: string, fallbackTitle: string, terminalTitle: string }> {
 		const assert: AssertFn = scenario.assert
 		const service = new VirtualFileSystemService(null)
 		const snapshot = service.load()
 		const availableApps = [
 			{ id: 'file-manager', name: 'File Manager' },
 			{ id: 'text-editor', name: 'Text Editor' },
-			{ id: 'image-viewer', name: 'Image Viewer' }
+			{ id: 'image-viewer', name: 'Image Viewer' },
+			{ id: 'terminal', name: 'Terminal' }
 		]
 		const documentsFolder = service.resolvePath('/Documents')
 		const readmeFile = service.resolvePath('/Documents/README.txt')
@@ -28,14 +29,16 @@ export class AppWindowPresentationTest {
 		const fileManagerTitle = AppWindowPresentation.buildWindowTitle(availableApps, snapshot, 'file-manager', documentsFolder.id)
 		const textEditorTitle = AppWindowPresentation.buildWindowTitle(availableApps, snapshot, 'text-editor', readmeFile.id)
 		const fallbackTitle = AppWindowPresentation.buildWindowTitle(availableApps, snapshot, 'image-viewer', null)
+		const terminalTitle = AppWindowPresentation.buildWindowTitle(availableApps, snapshot, 'terminal', null)
 		assert(fileManagerTitle === 'Documents — File Manager', 'Expected folder-backed File Manager windows to use the folder name in their title')
 		assert(textEditorTitle === 'README.txt', 'Expected file-backed Text Editor windows to use the file name in their title')
 		assert(fallbackTitle === 'Image Viewer', 'Expected windows without an opened file to fall back to the app name')
-		return { fileManagerTitle, textEditorTitle, fallbackTitle }
+		assert(terminalTitle === 'Terminal', 'Expected Terminal windows to use their stable shell title')
+		return { fileManagerTitle, textEditorTitle, fallbackTitle, terminalTitle }
 	}
 
 	@Scenario('renders the settings app body with theme and wallpaper controls')
-	static async rendersSettingsWindowContent(scenario: ScenarioParameter): Promise<{ hasThemeSelect: boolean, hasWallpaperSelect: boolean }> {
+	static async rendersSettingsWindowContent(scenario: ScenarioParameter): Promise<{ hasThemeSelect: boolean, hasWallpaperSelect: boolean, hasTerminalHost: boolean }> {
 		const assert: AssertFn = scenario.assert
 		const service = new VirtualFileSystemService(null)
 		service.load()
@@ -78,8 +81,18 @@ export class AppWindowPresentationTest {
 		const contentText = String(content.strings.join(' '))
 		const hasThemeSelect = contentText.includes('iva-settings-view')
 		const hasWallpaperSelect = contentText.includes('iva-settings-view')
+		const terminalContent = AppWindowPresentation.renderWindowContent(
+			{ id: 2, appId: 'terminal', openedNodeId: null, sourceFolderId: null },
+			{
+				...platformContext,
+				appId: 'terminal'
+			}
+		)
+		const terminalContentText = String(terminalContent.strings.join(' '))
+		const hasTerminalHost = terminalContentText.includes('iva-terminal-view')
 		assert(hasThemeSelect, 'Expected the settings window body to render the settings app host element')
 		assert(hasWallpaperSelect, 'Expected the settings window body to render the settings app host element')
-		return { hasThemeSelect, hasWallpaperSelect }
+		assert(hasTerminalHost, 'Expected the terminal window body to render the Terminal app host element')
+		return { hasThemeSelect, hasWallpaperSelect, hasTerminalHost }
 	}
 }

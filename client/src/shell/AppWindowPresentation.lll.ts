@@ -30,6 +30,9 @@ export class AppWindowPresentation {
 		if (appId === 'activity-monitor') {
 			return 'Activity Monitor'
 		}
+		if (appId === 'terminal') {
+			return 'Terminal'
+		}
 		return appDefinition.name
 	}
 
@@ -57,6 +60,9 @@ export class AppWindowPresentation {
 		}
 		if (windowEntry.appId === 'activity-monitor') {
 			return html`<iva-activity-monitor-view .platformContext=${platformContext}></iva-activity-monitor-view>`
+		}
+		if (windowEntry.appId === 'terminal') {
+			return html`<iva-terminal-view .platformContext=${platformContext}></iva-terminal-view>`
 		}
 		return html`
 			<div class="settings-grid">

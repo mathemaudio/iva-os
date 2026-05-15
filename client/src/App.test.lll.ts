@@ -322,6 +322,29 @@ export class AppTest {
 		return { currentFolderBeforeOpen, currentFolderAfterOpen, documentsStillVisible }
 	}
 
+	@Scenario('opens Terminal from the launcher and shows its supported command list')
+	static async opensTerminalFromLauncher(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ hasWindow: boolean, hasBanner: boolean, dockRunning: string | null }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before opening Terminal')
+		this.click(app, '[data-testid="launcher-app-terminal"]')
+		await waitFor(() => this.find(app, '[data-testid="window-terminal"]') !== null, 'Expected Terminal window to open from the launcher')
+		await waitFor(() => this.find(app, 'iva-terminal-view') !== null, 'Expected the Terminal host element to render inside the shell')
+		const hasWindow = this.find(app, '[data-testid="window-terminal"]') !== null
+		const terminalOutput = this.readTextInTerminal(app, '[data-testid="terminal-output"]')
+		const hasBanner = terminalOutput.includes('Supported Unix-like commands:') && terminalOutput.includes('ls') && terminalOutput.includes('rm')
+		const dockRunning = this.find(app, '[data-testid="dock-app-terminal"]')?.getAttribute('data-running')
+		assert(hasWindow, 'Expected Terminal to open from the launcher')
+		assert(hasBanner, 'Expected Terminal startup to list its supported command set')
+		assert(dockRunning === 'true', 'Expected the dock to mark Terminal as running after launch')
+		return { hasWindow, hasBanner, dockRunning }
+	}
+
 	@Scenario('opens and closes the Image Viewer from the launcher without breaking the shell')
 	static async opensAndClosesImageViewer(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ opened: boolean, closed: boolean, fileManagerStillVisible: boolean }> {
 		const assert: AssertFn = scenario.assert
@@ -490,6 +513,21 @@ export class AppTest {
 	private static findInImageViewer(app: App, selector: string): HTMLElement | null {
 		const imageViewer = this.find(app, 'iva-image-viewer-view')
 		return imageViewer?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Finds one element inside the nested Terminal shadow root by selector.')
+	private static findInTerminal(app: App, selector: string): HTMLElement | null {
+		const terminal = this.find(app, 'iva-terminal-view')
+		return terminal?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null
+	}
+
+	@Spec('Reads text content from one element inside the nested Terminal shadow root.')
+	private static readTextInTerminal(app: App, selector: string): string {
+		const element = this.findInTerminal(app, selector)
+		if (element === null) {
+			throw new Error(`Expected Terminal text element to exist for selector: ${selector}`)
+		}
+		return element.textContent?.trim() ?? ''
 	}
 
 	@Spec('Finds one element inside the nested Activity Monitor shadow root by selector.')
