@@ -67,6 +67,89 @@ export class AppTest {
 		return { openWindowsBeforeMinimize, restoredVisible, maximized, closed }
 	}
 
+	@Scenario('restores persisted shell windows after a reload with their size, position, and minimized state intact')
+	static async restoresPersistedWindowsAfterReload(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ restoredWindowCount: number, restoredLeft: number, restoredTop: number, restoredWidth: number, restoredHeight: number, minimizedHidden: boolean, launcherOpen: boolean }> {
+		const assert: AssertFn = scenario.assert
+		const waitFor: WaitForFn = scenario.waitFor
+		this.resetShellStorage()
+		const app = await subjectFactory()
+		await this.waitForApp(app, waitFor)
+
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to open before persisting reload state')
+		this.click(app, '[data-testid="launcher-app-text-editor"]')
+		await waitFor(() => this.find(app, '[data-testid="window-text-editor"]') !== null, 'Expected text editor window to open before persisting reload state')
+
+		const desktopSurface = this.find(app, '[data-testid="desktop-surface"]')
+		const windowsRegion = this.find(app, '.windows')
+		const textEditorHeader = this.find(app, '[data-testid="window-header-text-editor"]')
+		const textEditorWindow = this.find(app, '[data-testid="window-text-editor"]')
+		const resizeHandle = this.find(app, '[data-testid="resize-text-editor"]')
+		assert(desktopSurface !== null, 'Expected desktop surface to exist before persisting reload state')
+		assert(windowsRegion !== null, 'Expected windows region to exist before persisting reload state')
+		assert(textEditorHeader !== null, 'Expected text editor header to exist before persisting reload state')
+		assert(textEditorWindow !== null, 'Expected text editor window to exist before persisting reload state')
+		assert(resizeHandle !== null, 'Expected text editor resize handle to exist before persisting reload state')
+
+		windowsRegion.getBoundingClientRect = (): DOMRect => new DOMRect(0, 0, 1200, 900)
+		const dragBounds = textEditorHeader.getBoundingClientRect()
+		const dragStartClientX = dragBounds.left + dragBounds.width / 2
+		const dragStartClientY = dragBounds.top + dragBounds.height / 2
+		textEditorHeader.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: dragStartClientX, clientY: dragStartClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: dragStartClientX + 160, clientY: dragStartClientY + 110, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: dragStartClientX + 160, clientY: dragStartClientY + 110 }))
+		await app.updateComplete
+
+		const resizedWindowBeforeReload = this.find(app, '[data-testid="window-text-editor"]')
+		assert(resizedWindowBeforeReload !== null, 'Expected text editor window to remain visible before resizing for reload state')
+		const resizeBounds = resizeHandle.getBoundingClientRect()
+		const resizeStartClientX = resizeBounds.left + resizeBounds.width / 2
+		const resizeStartClientY = resizeBounds.top + resizeBounds.height / 2
+		resizeHandle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: resizeStartClientX, clientY: resizeStartClientY, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX: resizeStartClientX + 140, clientY: resizeStartClientY + 90, buttons: 1 }))
+		desktopSurface.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: resizeStartClientX + 140, clientY: resizeStartClientY + 90 }))
+		await app.updateComplete
+
+		const positionedWindow = this.find(app, '[data-testid="window-text-editor"]')
+		assert(positionedWindow !== null, 'Expected text editor window to remain visible before minimizing for reload state')
+		const expectedLeft = this.readPixelOffset(positionedWindow, 'left')
+		const expectedTop = this.readPixelOffset(positionedWindow, 'top')
+		const expectedWidth = this.readPixelSize(positionedWindow, 'width')
+		const expectedHeight = this.readPixelSize(positionedWindow, 'height')
+		this.click(app, '[data-testid="minimize-text-editor"]')
+		await app.updateComplete
+		assert(this.find(app, '[data-testid="window-text-editor"]') === null, 'Expected text editor window to be minimized before reload simulation')
+		this.click(app, '[data-testid="launcher-toggle"]')
+		await waitFor(() => this.find(app, '[data-testid="launcher-panel"]') !== null, 'Expected launcher panel to be open before reload simulation')
+
+		app.remove()
+		await app.updateComplete
+		const reloadedApp = await subjectFactory()
+		await this.waitForApp(reloadedApp, waitFor)
+		await waitFor(() => this.find(reloadedApp, '[data-testid="window-file-manager"]') !== null, 'Expected file manager window to restore after reload')
+
+		const restoredWindowCount = this.findAll(reloadedApp, '[data-testid^="dock-app-"][data-running="true"]').length
+		const restoredTextEditorWindow = this.find(reloadedApp, '[data-testid="window-text-editor"]')
+		const minimizedHidden = restoredTextEditorWindow === null
+		const launcherOpen = this.find(reloadedApp, '[data-testid="launcher-panel"]') !== null
+		this.click(reloadedApp, '[data-testid="dock-app-text-editor"]')
+		await waitFor(() => this.find(reloadedApp, '[data-testid="window-text-editor"]') !== null, 'Expected minimized text editor window to restore from the dock after reload')
+		const unminimizedTextEditorWindow = this.find(reloadedApp, '[data-testid="window-text-editor"]')
+		assert(unminimizedTextEditorWindow !== null, 'Expected text editor window to become visible after restoring from the dock post-reload')
+		const restoredLeft = this.readPixelOffset(unminimizedTextEditorWindow, 'left')
+		const restoredTop = this.readPixelOffset(unminimizedTextEditorWindow, 'top')
+		const restoredWidth = this.readPixelSize(unminimizedTextEditorWindow, 'width')
+		const restoredHeight = this.readPixelSize(unminimizedTextEditorWindow, 'height')
+		assert(restoredWindowCount >= 2, 'Expected file manager and text editor to remain marked as running after reload')
+		assert(minimizedHidden, 'Expected minimized windows to stay hidden after reload until restored from the dock')
+		assert(launcherOpen === true, 'Expected launcher openness to persist across reload when it was left open')
+		assert(restoredLeft === expectedLeft, `Expected restored left offset to match persisted value. restoredLeft=${restoredLeft}, expectedLeft=${expectedLeft}`)
+		assert(restoredTop === expectedTop, `Expected restored top offset to match persisted value. restoredTop=${restoredTop}, expectedTop=${expectedTop}`)
+		assert(restoredWidth === expectedWidth, `Expected restored width to match persisted value. restoredWidth=${restoredWidth}, expectedWidth=${expectedWidth}`)
+		assert(restoredHeight === expectedHeight, `Expected restored height to match persisted value. restoredHeight=${restoredHeight}, expectedHeight=${expectedHeight}`)
+		return { restoredWindowCount, restoredLeft, restoredTop, restoredWidth, restoredHeight, minimizedHidden, launcherOpen }
+	}
+
 	@Scenario('drags a normal window by its title bar')
 	static async dragsWindowFromHeader(subjectFactory: SubjectFactory<App>, scenario: ScenarioParameter): Promise<{ movedLeft: number, movedTop: number }> {
 		const assert: AssertFn = scenario.assert
@@ -585,6 +668,7 @@ export class AppTest {
 	private static resetShellStorage(): void {
 		window.localStorage.removeItem('lll.settings.v1')
 		window.localStorage.removeItem('ivaos-shell-preferences')
+		window.localStorage.removeItem('iva.window-state.v1')
 		window.localStorage.removeItem('iva.vfs.v1')
 		window.localStorage.removeItem('iva.vfs.v2')
 		const nodeKeysToRemove: string[] = []

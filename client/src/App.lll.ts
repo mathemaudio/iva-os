@@ -18,6 +18,7 @@ import { VirtualFileSystemService } from './vfs/VirtualFileSystemService.lll'
 import { AppPreferenceStore } from './shell/AppPreferenceStore.lll'
 import { AppWindowCatalog } from './shell/AppWindowCatalog.lll'
 import { AppWindowPresentation } from './shell/AppWindowPresentation.lll'
+import { AppWindowStateStore } from './shell/AppWindowStateStore.lll'
 import { PlatformFileSystemService } from './platform/PlatformFileSystemService.lll'
 import { PlatformSettingsService } from './platform/PlatformSettingsService.lll'
 import { PlatformAppLauncherService } from './platform/PlatformAppLauncherService.lll'
@@ -27,10 +28,18 @@ import { AppWindowContextRegistry } from './shell/AppWindowContextRegistry.lll';
 import { AppRuntimeSnapshotBuilder } from './shell/runtime/AppRuntimeSnapshotBuilder.lll';
 import { AppChildWindowBridge } from './shell/windowing/AppChildWindowBridge.lll';
 import './shell/dnd/ShellFileDrop.lll'
+import { AppWindowStateRestorer } from './shell/AppWindowStateRestorer.lll';
+import { AppWindowFocusController } from './shell/windowing/AppWindowFocusController.lll';
+
+
 
 @Spec('Composes the browser-hosted operating shell with shared VFS-backed apps, launcher routing, and persisted appearance settings.')
 @customElement('app-root')
 export class App extends LitElement {
+	private readonly appWindowFocusController = new AppWindowFocusController(this);
+
+	private readonly appWindowStateRestorer = new AppWindowStateRestorer(this);
+
 	public readonly appChildWindowBridge = new AppChildWindowBridge(this);
 
 	private readonly appRuntimeSnapshotBuilder = new AppRuntimeSnapshotBuilder(this);
@@ -47,13 +56,13 @@ export class App extends LitElement {
 	private activeWallpaper: string = 'aurora'
 
 	@state()
-	private isLauncherOpen: boolean = false
+	public isLauncherOpen: boolean = false
 
 	@state()
 	public vfsSnapshot: VirtualFileSystemContract['Snapshot']
 
 	@state()
-	private nextWindowId: number = 1
+	public nextWindowId: number = 1
 
 	@state()
 	public windows: Array<{
@@ -117,6 +126,7 @@ export class App extends LitElement {
 		this.activeWallpaper = storedPreferences.wallpaper ?? 'aurora'
 		this.vfsSnapshot = this.virtualFileSystemService.load()
 		this.ensureWallpaperSelectionMatchesSnapshot(this.vfsSnapshot)
+		this.appWindowStateRestorer.restoreWindowState()
 	}
 
 	@Spec('Subscribes to the shared VFS, seeds the initial File Manager window, and starts wallpaper initialization work.')
@@ -132,6 +142,8 @@ export class App extends LitElement {
 		}
 		if (this.windows.length === 0) {
 			this.openApp('file-manager', this.vfsSnapshot.schema.rootId, null)
+		} else {
+			this.persistWindowState()
 		}
 		if (this.hasStartedBackgroundInitialization === false) {
 			this.hasStartedBackgroundInitialization = true
@@ -187,6 +199,7 @@ export class App extends LitElement {
 				title: AppWindowPresentation.buildWindowTitle(this.appWindowCatalog.availableApps, this.vfsSnapshot, 'file-manager', folderId)
 			}
 		})
+		this.persistWindowState()
 	}
 
 	@Spec('Ensures the active wallpaper selection always references either a built-in wallpaper or an existing VFS image file.')
@@ -255,6 +268,7 @@ export class App extends LitElement {
 	@Spec('Toggles the launcher panel visibility.')
 	private toggleLauncher(): void {
 		this.isLauncherOpen = !this.isLauncherOpen
+		this.persistWindowState()
 	}
 
 	@Spec('Returns the formatted shell clock label for the top bar.')
@@ -306,6 +320,7 @@ export class App extends LitElement {
 			})
 			this.platformRuntimeService.recordEvent('incoming', 'window', 'Reused running app', `${appDefinition.name} was focused again.`)
 			this.isLauncherOpen = false
+			this.persistWindowState()
 			return
 		}
 		const nextWindowId = this.nextWindowId
@@ -332,32 +347,8 @@ export class App extends LitElement {
 		this.nextWindowId += 1
 		this.platformRuntimeService.recordEvent('incoming', 'launcher', 'Opened app', `${appDefinition.name} is now running.`)
 		this.isLauncherOpen = false
+		this.persistWindowState()
 	}
-
-	@Spec('Focuses a window and brings it to the front of the z-order.')
-	private focusWindow(windowId: number): void {
-		const currentFocusedWindowId = this.getFocusedWindowId()
-		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
-		if (targetWindow === null) {
-			return
-		}
-		if (currentFocusedWindowId === windowId && targetWindow.isMinimized === false) {
-			return
-		}
-		const zIndex = this.getNextZIndex()
-		this.windows = this.windows.map(windowEntry => {
-			if (windowEntry.id !== windowId) {
-				return windowEntry
-			}
-			return {
-				...windowEntry,
-				isMinimized: false,
-				zIndex
-			}
-		})
-		this.platformRuntimeService.recordEvent('internal', 'window', 'Focused window', `${targetWindow.title} moved to the front.`)
-	}
-
 	@Spec('Minimizes a window while keeping it available in the dock.')
 	private minimizeWindow(windowId: number): void {
 		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
@@ -373,6 +364,7 @@ export class App extends LitElement {
 		if (targetWindow !== null) {
 			this.platformRuntimeService.recordEvent('internal', 'window', 'Minimized window', `${targetWindow.title} was minimized to the dock.`)
 		}
+		this.persistWindowState()
 	}
 
 	@Spec('Toggles maximized state and keeps the chosen window focused.')
@@ -394,6 +386,7 @@ export class App extends LitElement {
 			const nextState = targetWindow.isMaximized === true ? 'restored' : 'maximized'
 			this.platformRuntimeService.recordEvent('internal', 'window', 'Toggled window size', `${targetWindow.title} was ${nextState}.`)
 		}
+		this.persistWindowState()
 	}
 
 	@Spec('Closes a window and removes it from the shell state.')
@@ -404,38 +397,15 @@ export class App extends LitElement {
 		if (targetWindow !== null) {
 			this.platformRuntimeService.recordEvent('outgoing', 'window', 'Closed window', `${targetWindow.title} stopped running.`)
 		}
+		this.persistWindowState()
 	}
-
-	@Spec('Restores a minimized window and focuses it.')
-	private restoreAndFocusWindow(windowId: number): void {
-		const targetWindow = this.windows.find(windowEntry => windowEntry.id === windowId) ?? null
-		if (targetWindow === null) {
-			return
-		}
-		if (targetWindow.isMinimized === false && this.getFocusedWindowId() === windowId) {
-			return
-		}
-		const zIndex = this.getNextZIndex()
-		this.windows = this.windows.map(windowEntry => {
-			if (windowEntry.id !== windowId) {
-				return windowEntry
-			}
-			return {
-				...windowEntry,
-				isMinimized: false,
-				zIndex
-			}
-		})
-		this.platformRuntimeService.recordEvent('incoming', 'window', 'Restored window', `${targetWindow.title} returned from the dock.`)
-	}
-
 	@Spec('Begins dragging a normal window from its title bar and focuses it.')
 	private beginWindowDrag(windowId: number, event: MouseEvent): void {
 		const windowEntry = this.windows.find(candidate => candidate.id === windowId)
 		if (windowEntry === undefined || windowEntry.isMaximized === true) {
 			return
 		}
-		this.focusWindow(windowId)
+		this.appWindowFocusController.focusWindow(windowId)
 		this.activeDragSession = {
 			windowId,
 			startClientX: event.clientX,
@@ -476,6 +446,7 @@ export class App extends LitElement {
 				top: nextTop
 			}
 		})
+		this.persistWindowState()
 	}
 
 	@Spec('Begins resizing a normal window from its lower-right handle and keeps that window focused.')
@@ -484,7 +455,7 @@ export class App extends LitElement {
 		if (windowEntry === undefined || windowEntry.isMaximized === true) {
 			return
 		}
-		this.focusWindow(windowId)
+		this.appWindowFocusController.focusWindow(windowId)
 		this.activeResizeSession = {
 			windowId,
 			startClientX: event.clientX,
@@ -530,6 +501,7 @@ export class App extends LitElement {
 				height: nextHeight
 			}
 		})
+		this.persistWindowState()
 	}
 
 	@Spec('Ends the current drag or resize pointer session when the pointer is released.')
@@ -537,7 +509,26 @@ export class App extends LitElement {
 		this.activeDragSession = null
 		this.activeResizeSession = null
 	}
+	@Spec('Calculates the next window identifier after restoring persisted shell windows.')
+	public calculateNextWindowIdFromState(restoredWindows: Array<{ id: number }>, storedNextWindowId: number): number {
+		const highestRestoredWindowId = restoredWindows.reduce((highestWindowId, windowEntry) => {
+			return windowEntry.id > highestWindowId ? windowEntry.id : highestWindowId
+		}, 0)
+		const candidateNextWindowId = highestRestoredWindowId + 1
+		if (storedNextWindowId > candidateNextWindowId) {
+			return storedNextWindowId
+		}
+		return candidateNextWindowId
+	}
 
+	@Spec('Persists the current shell window state into the dedicated localStorage record.')
+	public persistWindowState(): void {
+		AppWindowStateStore.persistWindowState({
+			isLauncherOpen: this.isLauncherOpen,
+			nextWindowId: this.nextWindowId,
+			windows: this.windows
+		})
+	}
 
 	@Spec('Returns true when the given app currently has an open window.')
 	private isAppRunning(appId: string): boolean {
@@ -584,7 +575,7 @@ export class App extends LitElement {
 	}
 
 	@Spec('Calculates the next z-index for a focused window.')
-	private getNextZIndex(): number {
+	public getNextZIndex(): number {
 		if (this.windows.length === 0) {
 			return 1
 		}
@@ -630,7 +621,7 @@ export class App extends LitElement {
 									data-focused=${String(windowEntry.id === focusedWindowId)}
 									data-current-folder-id=${windowEntry.appId === 'file-manager' ? windowEntry.openedNodeId ?? '' : ''}
 									style=${`left:${windowEntry.left}px;top:${windowEntry.top}px;width:${windowEntry.width}px;height:${windowEntry.height}px;z-index:${windowEntry.zIndex};`}
-									@click=${() => this.focusWindow(windowEntry.id)}
+									@click=${() => this.appWindowFocusController.focusWindow(windowEntry.id)}
 								>
 									<div class="window-header" data-testid="window-header-${windowEntry.appId}" @mousedown=${(event: MouseEvent) => this.beginWindowDrag(windowEntry.id, event)}>
 										<div class="window-controls window-controls-leading">
@@ -684,7 +675,7 @@ export class App extends LitElement {
 								<button
 									data-testid="dock-app-${appEntry.id}"
 									data-running=${String(this.isAppRunning(appEntry.id))}
-									@click=${() => openWindow === undefined ? this.openApp(appEntry.id) : this.restoreAndFocusWindow(openWindow.id)}
+									@click=${() => openWindow === undefined ? this.openApp(appEntry.id) : this.appWindowFocusController.restoreAndFocusWindow(openWindow.id)}
 								>
 									${EmojiIconRenderer.renderIcon(appEntry.icon, `${appEntry.name} icon`)}
 									<span class="dock-label">${appEntry.name}</span>
